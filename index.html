@@ -187,14 +187,17 @@
     }
 
     // 屏幕震动
-    function shakeScreen(intensity = 5) {
-        container.animate([
-            { transform: `translate(${Math.random()*intensity}px, ${Math.random()*intensity}px)` },
-            { transform: `translate(${-Math.random()*intensity}px, ${-Math.random()*intensity}px)` },
-            { transform: `translate(${Math.random()*intensity*0.5}px, ${-Math.random()*intensity*0.5}px)` },
-            { transform: `translate(0,0)` }
-        ], { duration: 100, iterations: 1 });
-    }
+function shakeScreen(intensity = 5, applyFactor = true) {
+    const factor = applyFactor ? 2 : 1;
+    container.animate([
+        { transform: `translate(${Math.random()*intensity*factor}px, ${Math.random()*intensity*factor}px)` },
+        { transform: `translate(${-Math.random()*intensity*factor}px, ${-Math.random()*intensity*factor}px)` },
+        { transform: `translate(${Math.random()*intensity*0.5*factor}px, ${-Math.random()*intensity*0.5*factor}px)` },
+        { transform: `translate(0,0)` }
+    ], { duration: 100, iterations: 1 });
+}
+
+
 
     // 屏幕背景闪烁
     function flashBackground(color, duration = 150) {
@@ -210,13 +213,14 @@
         let intensity = 0;
         let flashDur = 150;
 
-        if (count >= 30) { text = PRAISES[5]; intensity = 20; flashDur = 400; }
-        else if (count >= 24) { text = PRAISES[4]; intensity = 15; flashDur = 300; }
-        else if (count >= 18) { text = PRAISES[3]; intensity = 12; flashDur = 250; }
-        else if (count >= 12) { text = PRAISES[2]; intensity = 9; flashDur = 200; }
-        else if (count >= 8) { text = PRAISES[1]; intensity = 6; flashDur = 150; }
-        else if (count >= 5) { text = PRAISES[0]; intensity = 4; flashDur = 100; }
-        else return;
+if (count >= 20) { text = PRAISES[5]; intensity = 100; flashDur = 900; }
+else if (count >= 15) { text = PRAISES[4]; intensity = 60; flashDur = 700; }
+else if (count >= 12) { text = PRAISES[3]; intensity = 50; flashDur = 650; }
+else if (count >= 9)  { text = PRAISES[2]; intensity = 40; flashDur = 500; }
+else if (count >= 6)  { text = PRAISES[1]; intensity = 30; flashDur = 400; }
+else if (count >= 4)  { text = PRAISES[0]; intensity = 20; flashDur = 300; }
+else return;
+
 
         const el = document.getElementById('praise-display');
         el.innerText = text;
@@ -379,6 +383,7 @@
 
         updateScore(goalScore * 0.25, pos.x, pos.y);
         showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
+	shakeScreen(25, false);
 
         spawnBurst(pos.x, pos.y, '#FF00FF', true);
         // 炸弹核心强力冲击
