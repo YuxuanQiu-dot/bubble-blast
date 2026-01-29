@@ -102,12 +102,35 @@
         #spin-text { 
             color:#ff00ff; font-size:18px; font-family: 'Fascinate Inline';
             text-shadow:0 0 10px #ff00ff;
+            position: relative;
         }
-        .spin-pop { animation: spinPopAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .spin-pop { animation: spinPopAnim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes spinPopAnim {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.6); color: #fff; text-shadow: 0 0 30px #ff00ff; }
-            100% { transform: scale(1); }
+            0% { transform: scale(1) rotate(0deg); color: #ff00ff; }
+            15% { transform: scale(2.5) rotate(-10deg); color: #fff; text-shadow: 0 0 40px #ff00ff, 0 0 80px #ff00ff, 0 0 120px #ff00ff; }
+            30% { transform: scale(1.8) rotate(8deg); color: #00ffff; text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff; }
+            45% { transform: scale(2.2) rotate(-5deg); color: #fff; text-shadow: 0 0 50px #ff00ff, 0 0 100px #ff00ff; }
+            60% { transform: scale(1.6) rotate(3deg); color: #ffff00; text-shadow: 0 0 40px #ffff00; }
+            75% { transform: scale(1.3) rotate(-2deg); color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+            100% { transform: scale(1) rotate(0deg); color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
+        }
+        /* SPIN +1 浮动提示 */
+        .spin-plus-one {
+            position: absolute;
+            color: #00ffff;
+            font-size: 28px;
+            font-family: 'Fascinate Inline';
+            font-weight: 900;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            pointer-events: none;
+            z-index: 250;
+            animation: spinPlusOneAnim 1s ease-out forwards;
+        }
+        @keyframes spinPlusOneAnim {
+            0% { transform: translate(-50%, 0) scale(0) rotate(-20deg); opacity: 0; }
+            20% { transform: translate(-50%, -20px) scale(2) rotate(10deg); opacity: 1; }
+            40% { transform: translate(-50%, -40px) scale(1.5) rotate(-5deg); opacity: 1; }
+            100% { transform: translate(-50%, -80px) scale(1) rotate(0deg); opacity: 0; }
         }
 
         .energy-shard {
@@ -329,12 +352,10 @@
         if (allLit) {
             charges++;
             flashBackground('#00ffff', 400);
+            shakeScreen(15);
             
-            // SPIN 增加时的动画
-            const spinEl = document.getElementById('spin-text');
-            spinEl.classList.remove('spin-pop');
-            void spinEl.offsetWidth; 
-            spinEl.classList.add('spin-pop');
+            // SPIN 增加时的超强动画
+            showSpinGainEffect();
             
             // 为所有亮着的灯添加脉冲动画
             const allSlots = document.querySelectorAll('.energy-slot.active');
@@ -350,10 +371,7 @@
             }, 700);
         } else if (charges > oldCharges) {
             // SPIN 增加时的动画（兜底逻辑）
-            const spinEl = document.getElementById('spin-text');
-            spinEl.classList.remove('spin-pop');
-            void spinEl.offsetWidth; 
-            spinEl.classList.add('spin-pop');
+            showSpinGainEffect();
         }
     }
 
@@ -459,6 +477,53 @@
         el.innerText = text;
         container.appendChild(el);
         setTimeout(() => el.remove(), 800);
+    }
+
+    // SPIN 增加时的超强特效
+    function showSpinGainEffect() {
+        const spinEl = document.getElementById('spin-text');
+        spinEl.classList.remove('spin-pop');
+        void spinEl.offsetWidth; 
+        spinEl.classList.add('spin-pop');
+        
+        // 创建 "+1 SPIN!" 浮动提示
+        const plusOne = document.createElement('div');
+        plusOne.className = 'spin-plus-one';
+        plusOne.innerText = '+1 SPIN!';
+        const spinRect = spinEl.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        plusOne.style.left = (spinRect.left + spinRect.width/2 - containerRect.left) + 'px';
+        plusOne.style.top = (spinRect.top - containerRect.top) + 'px';
+        container.appendChild(plusOne);
+        setTimeout(() => plusOne.remove(), 1000);
+        
+        // 创建放射状粒子
+        for(let i = 0; i < 12; i++) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
+                position: absolute;
+                width: 6px; height: 6px;
+                background: ${i % 2 === 0 ? '#00ffff' : '#ff00ff'};
+                border-radius: 50%;
+                pointer-events: none;
+                z-index: 250;
+                box-shadow: 0 0 10px ${i % 2 === 0 ? '#00ffff' : '#ff00ff'};
+            `;
+            particle.style.left = (spinRect.left + spinRect.width/2 - containerRect.left) + 'px';
+            particle.style.top = (spinRect.top + spinRect.height/2 - containerRect.top) + 'px';
+            container.appendChild(particle);
+            
+            const angle = (i / 12) * Math.PI * 2;
+            const distance = 80 + Math.random() * 40;
+            particle.animate([
+                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                { transform: `translate(calc(-50% + ${Math.cos(angle) * distance}px), calc(-50% + ${Math.sin(angle) * distance}px)) scale(0)`, opacity: 0 }
+            ], {
+                duration: 600,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                fill: 'forwards'
+            }).onfinish = () => particle.remove();
+        }
     }
 
     window.pullLever = function() {
@@ -592,24 +657,106 @@
 
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
+        const time = Date.now() / 1000;
+        
         Composite.allBodies(engine.world).forEach(b => {
             if (b.isStatic || b.isPopped) return;
             const x = b.position.x, y = b.position.y, r = 22, color = b.render.fillStyle;
-            ctx.save(); ctx.globalAlpha = 0.8;
-            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-            const radialGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, r);
-            radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0)'); radialGrad.addColorStop(0.8, color + "33"); radialGrad.addColorStop(1, color + "66");
-            ctx.fillStyle = radialGrad; ctx.fill();
-            ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.2, 0, Math.PI * 2);
-            const highGrad = ctx.createRadialGradient(x - r*0.35, y - r*0.35, 0, x - r*0.35, y - r*0.35, r*0.2);
-            highGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = highGrad; ctx.fill();
-            ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0.5, 2.5); ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+            
+            // 轻微的呼吸效果
+            const breathe = 1 + Math.sin(time * 3 + b.id) * 0.03;
+            const actualR = r * breathe;
+            
+            ctx.save();
+            
+            // 1. 主体 - 半透明彩色填充，更有光泽感
+            ctx.globalAlpha = 0.6;
+            const mainGrad = ctx.createRadialGradient(x - actualR * 0.3, y - actualR * 0.3, 0, x, y, actualR);
+            mainGrad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+            mainGrad.addColorStop(0.3, color + 'aa');
+            mainGrad.addColorStop(0.7, color + '88');
+            mainGrad.addColorStop(1, color + '44');
+            ctx.beginPath();
+            ctx.arc(x, y, actualR, 0, Math.PI * 2);
+            ctx.fillStyle = mainGrad;
+            ctx.fill();
+            
+            // 2. 彩虹色边缘光晕（肥皂泡特征）
+            ctx.globalAlpha = 0.5;
+            const edgeHue = (time * 30 + b.id * 20) % 360;
+            const edgeGrad = ctx.createRadialGradient(x, y, actualR * 0.75, x, y, actualR * 1.05);
+            edgeGrad.addColorStop(0, 'transparent');
+            edgeGrad.addColorStop(0.5, `hsla(${edgeHue}, 100%, 70%, 0.3)`);
+            edgeGrad.addColorStop(0.7, `hsla(${(edgeHue + 60) % 360}, 100%, 70%, 0.4)`);
+            edgeGrad.addColorStop(0.85, `hsla(${(edgeHue + 120) % 360}, 100%, 70%, 0.3)`);
+            edgeGrad.addColorStop(1, 'transparent');
+            ctx.beginPath();
+            ctx.arc(x, y, actualR * 1.05, 0, Math.PI * 2);
+            ctx.fillStyle = edgeGrad;
+            ctx.fill();
+            
+            // 3. 外边缘描边 - 更亮更清晰
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.arc(x, y, actualR, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            
+            // 4. 主高光 - 左上角大高光（让泡泡看起来有光泽）
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            ctx.ellipse(x - actualR * 0.35, y - actualR * 0.35, actualR * 0.35, actualR * 0.25, -Math.PI / 4, 0, Math.PI * 2);
+            const highGrad = ctx.createRadialGradient(x - actualR * 0.35, y - actualR * 0.35, 0, x - actualR * 0.35, y - actualR * 0.35, actualR * 0.35);
+            highGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            highGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
+            highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = highGrad;
+            ctx.fill();
+            
+            // 5. 次高光 - 右下角小高光
+            ctx.beginPath();
+            ctx.arc(x + actualR * 0.3, y + actualR * 0.35, actualR * 0.12, 0, Math.PI * 2);
+            const secHighGrad = ctx.createRadialGradient(x + actualR * 0.3, y + actualR * 0.35, 0, x + actualR * 0.3, y + actualR * 0.35, actualR * 0.12);
+            secHighGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            secHighGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = secHighGrad;
+            ctx.fill();
+            
+            // 6. 顶部弧形反光
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(x, y, actualR * 0.8, Math.PI * 1.1, Math.PI * 1.9);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 7. 底部柔和反光
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.arc(x, y, actualR * 0.85, Math.PI * 0.1, Math.PI * 0.4);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            
+            // 特殊泡泡效果
             if (b.label === 'bomb') {
-                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; ctx.fillText("💣", x, y);
+                ctx.globalAlpha = 1;
+                ctx.font = "22px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+                ctx.fillText("💣", x, y);
             } else if (b.label === 'rainbow') {
-                const hue = (Date.now() / 10) % 360; ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`; ctx.lineWidth = 3; ctx.stroke();
+                ctx.globalAlpha = 0.8;
+                const hue = (time * 100) % 360;
+                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(x, y, actualR + 2, 0, Math.PI * 2);
+                ctx.stroke();
             }
+            
             ctx.restore();
         });
     });
