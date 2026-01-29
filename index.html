@@ -175,8 +175,8 @@
 
     function createBubble(x, y) {
         let label = 'normal', rand = Math.random();
-        if (rand < 0.012) label = 'bomb'; 
-        else if (rand < 0.02) label = 'rainbow'; 
+        if (rand < 0.008) label = 'bomb'; 
+        else if (rand < 0.005) label = 'rainbow'; 
         let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const b = Bodies.circle(x, y, 22, {
             restitution: 0.7, friction: 0.02, label,
