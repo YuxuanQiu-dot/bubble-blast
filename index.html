@@ -278,9 +278,9 @@
         if (rand < 0.008) label = 'bomb'; 
         else if (rand < 0.007) label = 'rainbow'; 
         const b = Bodies.circle(x, y, 22, {
-            restitution: 0.5, friction: 0.1, label,
+            restitution: 0.5, friction: 0.3, frictionAir: 0.01, label,
             customColor: label === 'rainbow' ? 'ANY' : color,
-            render: { fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
+            render: { visible: false, fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
         });
         World.add(engine.world, b);
     }
@@ -425,7 +425,7 @@
 
     function nextLevel() {
         level++;
-        currentScore = 0;
+        // 不再清零分数，分数继续累积
         goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
         
         document.getElementById('level-text').innerText = `LEVEL ${level}`;
@@ -532,15 +532,16 @@
         isPulling = true;
         document.getElementById('lever-container').classList.add('pulling');
         let count = 0;
+        const totalBubbles = 50; // 每次spin掉落50个球
         const spawnInterval = setInterval(() => {
             createBubble(Math.random() * (width - 60) + 30, -40);
             count++;
-            if (count >= 36) clearInterval(spawnInterval);
-        }, 30);
+            if (count >= totalBubbles) clearInterval(spawnInterval);
+        }, 25); // 稍微加快掉落速度
         setTimeout(() => {
             document.getElementById('lever-container').classList.remove('pulling');
             isPulling = false;
-        }, 600);
+        }, 800); // 延长一点等待时间以配合更多的球
     };
 
     function applyShockwave(pos, r, force) {
@@ -577,7 +578,7 @@
 
         showPraise(toExplode.length, centerPos.x, centerPos.y, startBody.render.fillStyle);
         updateScore(toExplode.length * 20, centerPos.x, centerPos.y);
-        addEnergy(toExplode.length * 1.5); // 消除泡泡获得能量（会自动应用乘数）
+        addEnergy(toExplode.length * 1.2); // 消除泡泡获得能量（减少20%，会自动应用乘数）
         
         for(let b of toExplode) {
             b.isPopped = true;
@@ -595,6 +596,11 @@
         bombBody.isPopped = true;
         const pos = { ...bombBody.position };
         const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 200);
+        
+        // 点击炸弹奖励一次 SPIN
+        charges++;
+        syncUI();
+        showSpinGainEffect();
         
         let bombTotalGain = 0;
         const counted = new Set();
@@ -625,7 +631,7 @@
             World.remove(engine.world, b);
             await new Promise(r => setTimeout(r, 20));
         }
-        addEnergy(nearby.length * 1.5); // 炸弹也获得能量（会自动应用乘数）
+        addEnergy(nearby.length * 1.2); // 炸弹也获得能量（减少20%，会自动应用乘数）
     }
 
     function spawnBurst(x, y, color, isEpic) {
