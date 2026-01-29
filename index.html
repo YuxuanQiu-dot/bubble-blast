@@ -175,8 +175,8 @@
 
     function createBubble(x, y) {
         let label = 'normal', rand = Math.random();
-        if (rand < 0.009) label = 'bomb'; 
-        else if (rand < 0.008) label = 'rainbow'; 
+        if (rand < 0.012) label = 'bomb'; 
+        else if (rand < 0.02) label = 'rainbow'; 
         let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const b = Bodies.circle(x, y, 22, {
             restitution: 0.7, friction: 0.02, label,
@@ -193,12 +193,12 @@
             { transform: `translate(${-Math.random()*intensity}px, ${-Math.random()*intensity}px)` },
             { transform: `translate(${Math.random()*intensity*0.5}px, ${-Math.random()*intensity*0.5}px)` },
             { transform: `translate(0,0)` }
-        ], { duration: 100, iterations: 2 });
+        ], { duration: 100, iterations: 1 });
     }
 
     // 屏幕背景闪烁
     function flashBackground(color, duration = 150) {
-        container.style.background = color + "44"; // 约25%透明度
+        container.style.background = color + "44"; 
         setTimeout(() => {
             container.style.background = "radial-gradient(circle at center, #1a0033 0%, #000 100%)";
         }, duration);
@@ -221,12 +221,11 @@
         const el = document.getElementById('praise-display');
         el.innerText = text;
         el.className = "";
-        void el.offsetWidth; // 触发重绘
+        void el.offsetWidth; 
         el.className = "praise-anim";
         const pColor = customColor || COLORS[Math.floor(Math.random()*COLORS.length)];
         el.style.color = pColor;
         
-        // 触发震动和闪烁
         shakeScreen(intensity);
         flashBackground(pColor, flashDur);
     }
@@ -300,9 +299,26 @@
         }, 600);
     };
 
+    // 核心物理冲击波：推动周围物体
+    function applyShockwave(pos, radius, force) {
+        const bodies = Composite.allBodies(engine.world);
+        bodies.forEach(b => {
+            if (b.isStatic) return;
+            const dist = Vector.magnitude(Vector.sub(b.position, pos));
+            if (dist < radius && dist > 0) {
+                const diff = Vector.sub(b.position, pos);
+                const normal = Vector.normalise(diff);
+                // 距离越近推力越大
+                const strength = (1 - dist/radius) * force;
+                Body.applyForce(b, b.position, Vector.mult(normal, strength));
+            }
+        });
+    }
+
     async function chainExplode(startBody) {
         if (startBody.isPopped) return;
         let targetColor = startBody.customColor;
+        const centerPos = { ...startBody.position };
 
         const toExplode = [];
         const processed = new Set();
@@ -322,49 +338,64 @@
 
         if (toExplode.length < 2) return;
 
-        // 爽快感：顿帧 (Hit Stop)
+        toExplode.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, centerPos)) - Vector.magnitudeSquared(Vector.sub(b.position, centerPos)));
+
         if (toExplode.length > 10) {
             engine.timing.timeScale = 0.1;
             setTimeout(() => engine.timing.timeScale = 1, 50);
         }
 
-        // 触发赞美和反馈
-        showPraise(toExplode.length, startBody.position.x, startBody.position.y, startBody.render.fillStyle);
+        showPraise(toExplode.length, centerPos.x, centerPos.y, startBody.render.fillStyle);
         
         const baseValue = goalScore / 60;
-        updateScore(toExplode.length * baseValue, startBody.position.x, startBody.position.y);
+        updateScore(toExplode.length * baseValue, centerPos.x, centerPos.y);
         updateEnergy(toExplode.length * 0.6);
         
-        for(let b of toExplode) {
+        // 连环爆炸：带物理反馈的延迟循环
+        for(let i = 0; i < toExplode.length; i++) {
+            const b = toExplode[i];
             b.isPopped = true;
+
+            // 物理冲击波：推动周围泡泡，产生连锁感
+            applyShockwave(b.position, 100, 0.005);
+            
+            // 每次爆炸触发微小屏幕震动
+            shakeScreen(1.5);
+
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, toExplode.length > 10);
             World.remove(engine.world, b);
-            if (toExplode.length > 1) await new Promise(r => setTimeout(r, 15));
+            
+            await new Promise(r => setTimeout(r, 50));
         }
     }
 
-    function triggerBomb(bombBody) {
+    async function triggerBomb(bombBody) {
         if (bombBody.isPopped) return;
         bombBody.isPopped = true;
         const pos = { ...bombBody.position };
         const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 200);
         
+        nearby.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, pos)) - Vector.magnitudeSquared(Vector.sub(b.position, pos)));
+
         updateScore(goalScore * 0.25, pos.x, pos.y);
-        
-        // 炸弹也计入赞美词反馈
         showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
 
-        nearby.forEach(b => {
+        spawnBurst(pos.x, pos.y, '#FF00FF', true);
+        // 炸弹核心强力冲击
+        applyShockwave(pos, 300, 0.05);
+        World.remove(engine.world, bombBody);
+
+        for(let b of nearby) {
             b.isPopped = true;
+            // 每一级爆炸也产生小冲击
+            applyShockwave(b.position, 80, 0.003);
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, true);
             World.remove(engine.world, b);
-        });
+            await new Promise(r => setTimeout(r, 20));
+        }
         updateEnergy(nearby.length);
-        spawnBurst(pos.x, pos.y, '#FF00FF', true);
-        World.remove(engine.world, bombBody);
     }
 
-    // 增强的火花/烟花系统
     function spawnBurst(x, y, color, isEpic) {
         const count = isEpic ? 15 : 6;
         for (let i = 0; i < count; i++) {
