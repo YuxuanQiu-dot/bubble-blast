@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>泡泡爆破：狂热节拍</title>
+    <title>泡泡爆破：霓虹气泡</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fascinate+Inline&family=Russo+One&display=swap');
 
@@ -165,7 +165,7 @@
             wireframes: false, 
             background: 'transparent', 
             pixelRatio: window.devicePixelRatio,
-            showSleeping: false // 关键修复：禁止渲染器将休眠物体变灰
+            showSleeping: false 
         }
     });
 
@@ -427,10 +427,10 @@
                 render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } 
             });
             World.add(engine.world, p);
-            const fValue = isEpic ? 0.025 : 0.012;
+            const forceValue = isEpic ? 0.025 : 0.012;
             Body.applyForce(p, p.position, { 
-                x: (Math.random()-0.5)*fValue, 
-                y: (Math.random()-0.5)*fValue 
+                x: (Math.random()-0.5)*forceValue, 
+                y: (Math.random()-0.5)*forceValue 
             });
             setTimeout(() => World.remove(engine.world, p), isEpic ? 700 : 400);
         }
@@ -451,17 +451,68 @@
     for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
     updateEnergy(0);
 
+    // 气泡材质渲染系统
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
-        Composite.allBodies(engine.world).forEach(b => {
+        const bodies = Composite.allBodies(engine.world);
+
+        bodies.forEach(b => {
+            if (b.isStatic || b.isPopped) return;
+            
+            const x = b.position.x;
+            const y = b.position.y;
+            const r = 22;
+            const color = b.render.fillStyle;
+
+            ctx.save();
+            ctx.globalAlpha = 0.8; // 整体通透感
+
+            // 1. 霓虹边缘光 (Neon Rim)
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 2. 气泡薄膜渐变 (Soap Film Gradient)
+            // 创建一个从中心透明到边缘带色的径向渐变
+            const radialGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, r);
+            radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+            radialGrad.addColorStop(0.8, color + "33"); // 20% 透明度
+            radialGrad.addColorStop(1, color + "66");   // 40% 透明度
+            ctx.fillStyle = radialGrad;
+            ctx.fill();
+
+            // 3. 顶部主高光 (Main Highlight)
+            ctx.beginPath();
+            ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.2, 0, Math.PI * 2);
+            const highGrad = ctx.createRadialGradient(x - r*0.35, y - r*0.35, 0, x - r*0.35, y - r*0.35, r*0.2);
+            highGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = highGrad;
+            ctx.fill();
+
+            // 4. 底部反光弧 (Bottom Reflection)
+            ctx.beginPath();
+            ctx.arc(x, y, r * 0.75, 0.5, 2.5); // 绘制一段弧线
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // 5. 特殊标识
             if (b.label === 'bomb') {
-                ctx.font = "24px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText("💣", b.position.x, b.position.y);
+                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.fillText("💣", x, y);
             } else if (b.label === 'rainbow') {
-                const grad = ctx.createRadialGradient(b.position.x, b.position.y, 0, b.position.x, b.position.y, 22);
-                grad.addColorStop(0, '#fff'); grad.addColorStop(0.5, COLORS[Math.floor(Date.now()/100)%5]); grad.addColorStop(1, '#000');
-                ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(b.position.x, b.position.y, 22, 0, Math.PI*2); ctx.fill();
+                // 彩虹气泡：边缘颜色动态变化
+                const hue = (Date.now() / 10) % 360;
+                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
             }
+
+            ctx.restore();
         });
     });
 })();
