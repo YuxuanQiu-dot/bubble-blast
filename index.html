@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>泡泡爆破：Balatro 策略版</title>
+    <title>泡泡爆破：策略狂热版</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fascinate+Inline&family=Russo+One&display=swap');
 
@@ -78,9 +78,7 @@
             transform: scale(0.5) translateY(50px);
             transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        #combo-display.show {
-            opacity: 1; transform: scale(1) translateY(0);
-        }
+        #combo-display.show { opacity: 1; transform: scale(1) translateY(0); }
 
         .floating-text {
             position: absolute; color: #fff; font-weight: 900; font-size: 28px;
@@ -156,18 +154,11 @@
     const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Query, Vector } = Matter;
 
     const width = 375, height = 667;
-    let currentScore = 0;
-    let combo = 0;
-    let comboTimer = null;
+    let currentScore = 0, combo = 0, comboTimer = null;
     let isGameOver = false, isPulling = false;
-    
-    let level = 1;
-    let goalScore = 500;
-    let charges = 0;
-    let currentEnergy = 0;
+    let level = 1, goalScore = 500, charges = 0, currentEnergy = 0;
 
     const COLORS = ['#FF0055', '#00FF99', '#00D9FF', '#FFD700', '#CC00FF'];
-
     const engine = Engine.create();
     engine.world.gravity.y = 1.5;
 
@@ -189,10 +180,8 @@
 
     function createBubble(x, y) {
         let label = 'normal', rand = Math.random();
-        // 再次降低 30%：炸弹约 1.5%, 彩虹约 5%
         if (rand < 0.015) label = 'bomb'; 
         else if (rand < 0.065) label = 'rainbow'; 
-
         let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const b = Bodies.circle(x, y, 22, {
             restitution: 0.7, friction: 0.02, label,
@@ -202,49 +191,31 @@
         World.add(engine.world, b);
     }
 
-    // --- 核心数值比例逻辑 ---
     function updateScore(gain, x, y) {
         currentScore += gain;
-        // 低分阶段显示整数，万位以上采用 K/M 显示（模拟 Balatro）
-        let displayScore = Math.floor(currentScore);
-        document.getElementById('current-score').innerText = displayScore.toLocaleString();
-        
-        const progress = Math.min(100, (currentScore / goalScore) * 100);
-        document.getElementById('goal-bar-fill').style.width = progress + '%';
-
-        showFloatingText(x, y, "+" + displayScore.toLocaleString());
-
-        if (currentScore >= goalScore) {
-            nextLevel();
-        }
+        document.getElementById('current-score').innerText = Math.floor(currentScore).toLocaleString();
+        document.getElementById('goal-bar-fill').style.width = Math.min(100, (currentScore / goalScore) * 100) + '%';
+        showFloatingText(x, y, "+" + Math.floor(gain).toLocaleString());
+        if (currentScore >= goalScore) nextLevel();
     }
 
     function nextLevel() {
         level++;
-        // 目标分数成长
         goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
         if (goalScore > 100000000) goalScore = 100000000;
-
         document.getElementById('level-text').innerText = `LEVEL ${level}`;
         document.getElementById('target-score').innerText = `GOAL: ${goalScore.toLocaleString()}`;
         document.getElementById('goal-bar-fill').style.width = '0%';
-        
         const overlay = document.getElementById('level-up-overlay');
         overlay.style.display = 'flex';
         setTimeout(() => overlay.style.display = 'none', 600);
-        
-        charges++;
-        updateEnergy(0);
+        charges++; updateEnergy(0);
     }
 
     function updateEnergy(gain) {
         currentEnergy += gain;
-        // 充能需求：约为消除 20-30 个泡泡攒一个 Spin
         let required = 15 + level * 2;
-        while (currentEnergy >= required) {
-            currentEnergy -= required;
-            charges++;
-        }
+        while (currentEnergy >= required) { currentEnergy -= required; charges++; }
         document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
         const lever = document.getElementById('lever-container');
         if (charges > 0) lever.classList.add('ready'); else lever.classList.remove('ready');
@@ -255,14 +226,9 @@
         if (combo > 1) {
             el.innerText = `COMBO ${combo}`;
             el.classList.add('show');
-            
             clearTimeout(comboTimer);
-            comboTimer = setTimeout(() => {
-                el.classList.remove('show');
-            }, 1000);
-        } else {
-            el.classList.remove('show');
-        }
+            comboTimer = setTimeout(() => el.classList.remove('show'), 1000);
+        } else el.classList.remove('show');
     }
 
     function showFloatingText(x, y, text) {
@@ -280,11 +246,12 @@
         isPulling = true;
         document.getElementById('lever-container').classList.add('pulling');
         let count = 0;
+        // 数量提升至 36
         const spawnInterval = setInterval(() => {
             createBubble(Math.random() * (width - 60) + 30, -40);
             count++;
             if (count >= 36) clearInterval(spawnInterval);
-        }, 40);
+        }, 35); // 稍微加快生成速度
         setTimeout(() => {
             document.getElementById('lever-container').classList.remove('pulling');
             isPulling = false;
@@ -302,7 +269,7 @@
                 neighbors.forEach(n => counts[n.customColor] = (counts[n.customColor]||0)+1);
                 let max = 0, cands = [];
                 for(let c in counts) { if(counts[c] > max){ max = counts[c]; cands = [c]; } else if(counts[c] === max) cands.push(c); }
-                targetColor = cands[Math.floor(Math.random()*counts.length)];
+                targetColor = cands[Math.floor(Math.random()*cands.length)];
             } else targetColor = COLORS[Math.floor(Math.random()*COLORS.length)];
         }
 
@@ -323,12 +290,17 @@
             neighbors.forEach(n => { processed.add(n.id); queue.push(n); });
         }
 
+        // --- 核心修改：必须有两个及以上泡泡才可以点破 ---
+        if (toExplode.length < 2) {
+            // 点击无效，可以加个轻微的缩放反馈
+            Body.scale(startBody, 1.1, 1.1);
+            setTimeout(() => Body.scale(startBody, 1/1.1, 1/1.1), 50);
+            return; 
+        }
+
         if (toExplode.length >= 2) combo++; else combo = 0;
         updateComboUI();
         
-        // --- 核心比例计算 ---
-        // 设定玩家需要 7-10 次标准消除(约4-5个球)达成目标
-        // 所以 1 个球的基础价值约为 Goal / 60
         const baseValue = goalScore / 60;
         const totalGain = toExplode.length * baseValue * (1 + combo * 0.2);
         
@@ -349,11 +321,8 @@
         bombBody.isPopped = true;
         const pos = { ...bombBody.position };
         const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 180);
-        
-        // 炸弹价值约为 1/4 关卡进度
         const bombGain = goalScore * 0.25;
         updateScore(bombGain, pos.x, pos.y);
-        
         nearby.forEach(b => {
             b.isPopped = true;
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle);
@@ -377,9 +346,7 @@
     function checkLoseCondition() {
         setTimeout(() => {
             const bubbles = Composite.allBodies(engine.world).filter(b => b.label === 'normal' || b.label === 'bomb' || b.label === 'rainbow');
-            if (bubbles.length === 0 && charges === 0 && !isPulling && currentScore < goalScore) {
-                endGame();
-            }
+            if (bubbles.length === 0 && charges === 0 && !isPulling && currentScore < goalScore) endGame();
         }, 1200);
     }
 
