@@ -32,7 +32,6 @@
         @keyframes rotateBorder { to { --angle: 360deg; } }
         @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 
-        /* 顶部 UI */
         #top-panel {
             position: absolute; top: 15px; width: 100%;
             display: flex; flex-direction: column; align-items: center;
@@ -49,7 +48,6 @@
         #goal-bar-container { width: 280px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 12px; overflow: hidden; border: 1.5px solid #333; }
         #goal-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff); box-shadow: 0 0 15px #00ff99; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        /* Spin 增加时的动画 */
         #spin-text { 
             margin-top:10px; color:#00ffff; font-size:14px; 
             text-shadow:0 0 5px #00ffff; 
@@ -62,7 +60,6 @@
             100% { transform: scale(1); }
         }
 
-        /* 赞美文字动画 */
         #praise-display {
             position: absolute; width: 100%; top: 40%;
             text-align: center; color: #fff;
@@ -91,7 +88,6 @@
             100% { transform: translate(-50%, -120px) scale(1); opacity: 0; }
         }
 
-        /* 摇杆 */
         #lever-container {
             position: absolute; top: 120px; right: 20px;
             width: 50px; height: 80px; z-index: 150;
@@ -154,13 +150,23 @@
     const COLORS = ['#FF0055', '#00FF99', '#00D9FF', '#FFD700', '#CC00FF'];
     const PRAISES = ["SWEET!", "TASTY!", "DELICIOUS!", "FANTASTIC!", "UNBELIEVABLE!!", "DISCO KING!"];
 
+    // 物理引擎优化
     const engine = Engine.create();
     engine.world.gravity.y = 1.4;
+    engine.enableSleeping = true; 
+    engine.positionIterations = 10; 
 
     const container = document.getElementById('game-container');
     const render = Render.create({
         element: container, engine: engine,
-        options: { width, height, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
+        options: { 
+            width, 
+            height, 
+            wireframes: false, 
+            background: 'transparent', 
+            pixelRatio: window.devicePixelRatio,
+            showSleeping: false // 关键修复：禁止渲染器将休眠物体变灰
+        }
     });
 
     Render.run(render);
@@ -176,30 +182,28 @@
     function createBubble(x, y) {
         let label = 'normal', rand = Math.random();
         if (rand < 0.008) label = 'bomb'; 
-        else if (rand < 0.007 label = 'rainbow'; 
+        else if (rand < 0.007)label = 'rainbow'; 
         let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const b = Bodies.circle(x, y, 22, {
-            restitution: 0.7, friction: 0.02, label,
+            restitution: 0.5, 
+            friction: 0.1,    
+            label,
             customColor: label === 'rainbow' ? 'ANY' : color,
             render: { fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
         });
         World.add(engine.world, b);
     }
 
-    // 屏幕震动
-function shakeScreen(intensity = 5, applyFactor = true) {
-    const factor = applyFactor ? 2 : 1;
-    container.animate([
-        { transform: `translate(${Math.random()*intensity*factor}px, ${Math.random()*intensity*factor}px)` },
-        { transform: `translate(${-Math.random()*intensity*factor}px, ${-Math.random()*intensity*factor}px)` },
-        { transform: `translate(${Math.random()*intensity*0.5*factor}px, ${-Math.random()*intensity*0.5*factor}px)` },
-        { transform: `translate(0,0)` }
-    ], { duration: 100, iterations: 1 });
-}
+    function shakeScreen(intensity = 5, applyFactor = true) {
+        const factor = applyFactor ? 2 : 1;
+        container.animate([
+            { transform: `translate(${Math.random()*intensity*factor}px, ${Math.random()*intensity*factor}px)` },
+            { transform: `translate(${-Math.random()*intensity*factor}px, ${-Math.random()*intensity*factor}px)` },
+            { transform: `translate(${Math.random()*intensity*0.5*factor}px, ${-Math.random()*intensity*0.5*factor}px)` },
+            { transform: `translate(0,0)` }
+        ], { duration: 100, iterations: 1 });
+    }
 
-
-
-    // 屏幕背景闪烁
     function flashBackground(color, duration = 150) {
         container.style.background = color + "44"; 
         setTimeout(() => {
@@ -207,20 +211,18 @@ function shakeScreen(intensity = 5, applyFactor = true) {
         }, duration);
     }
 
-    // 弹出赞美词并触发特效
     function showPraise(count, x, y, customColor) {
         let text = "";
         let intensity = 0;
         let flashDur = 150;
 
-if (count >= 20) { text = PRAISES[5]; intensity = 100; flashDur = 900; }
-else if (count >= 15) { text = PRAISES[4]; intensity = 60; flashDur = 700; }
-else if (count >= 12) { text = PRAISES[3]; intensity = 50; flashDur = 650; }
-else if (count >= 9)  { text = PRAISES[2]; intensity = 40; flashDur = 500; }
-else if (count >= 6)  { text = PRAISES[1]; intensity = 30; flashDur = 400; }
-else if (count >= 4)  { text = PRAISES[0]; intensity = 20; flashDur = 300; }
-else return;
-
+        if (count >= 20) { text = PRAISES[5]; intensity = 100; flashDur = 900; }
+        else if (count >= 15) { text = PRAISES[4]; intensity = 60; flashDur = 700; }
+        else if (count >= 12) { text = PRAISES[3]; intensity = 50; flashDur = 650; }
+        else if (count >= 9)  { text = PRAISES[2]; intensity = 40; flashDur = 500; }
+        else if (count >= 6)  { text = PRAISES[1]; intensity = 30; flashDur = 400; }
+        else if (count >= 4)  { text = PRAISES[0]; intensity = 20; flashDur = 300; }
+        else return;
 
         const el = document.getElementById('praise-display');
         el.innerText = text;
@@ -257,7 +259,7 @@ else return;
     function updateEnergy(gain, forceCharge = false) {
         const oldCharges = charges;
         currentEnergy += gain;
-        let required = 15 + level * 2;
+        let required = 25 + level * 4;
         while (currentEnergy >= required) { currentEnergy -= required; charges++; }
         if (forceCharge) charges++;
 
@@ -303,7 +305,6 @@ else return;
         }, 600);
     };
 
-    // 核心物理冲击波：推动周围物体
     function applyShockwave(pos, radius, force) {
         const bodies = Composite.allBodies(engine.world);
         bodies.forEach(b => {
@@ -312,7 +313,6 @@ else return;
             if (dist < radius && dist > 0) {
                 const diff = Vector.sub(b.position, pos);
                 const normal = Vector.normalise(diff);
-                // 距离越近推力越大
                 const strength = (1 - dist/radius) * force;
                 Body.applyForce(b, b.position, Vector.mult(normal, strength));
             }
@@ -350,25 +350,17 @@ else return;
         }
 
         showPraise(toExplode.length, centerPos.x, centerPos.y, startBody.render.fillStyle);
+        updateScore(toExplode.length * 20, centerPos.x, centerPos.y);
+        updateEnergy(toExplode.length * 0.5);
         
-        const baseValue = goalScore / 60;
-        updateScore(toExplode.length * baseValue, centerPos.x, centerPos.y);
-        updateEnergy(toExplode.length * 0.6);
-        
-        // 连环爆炸：带物理反馈的延迟循环
         for(let i = 0; i < toExplode.length; i++) {
             const b = toExplode[i];
+            if (!b) continue;
             b.isPopped = true;
-
-            // 物理冲击波：推动周围泡泡，产生连锁感
             applyShockwave(b.position, 100, 0.005);
-            
-            // 每次爆炸触发微小屏幕震动
             shakeScreen(1.5);
-
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, toExplode.length > 10);
             World.remove(engine.world, b);
-            
             await new Promise(r => setTimeout(r, 50));
         }
     }
@@ -381,24 +373,49 @@ else return;
         
         nearby.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, pos)) - Vector.magnitudeSquared(Vector.sub(b.position, pos)));
 
-        updateScore(goalScore * 0.25, pos.x, pos.y);
+        let bombTotalGain = 0;
+        const countedInBomb = new Set();
+
+        for (const b of nearby) {
+            if (countedInBomb.has(b.id)) continue;
+            
+            const cluster = [];
+            const q = [b];
+            const visited = new Set([b.id]);
+            const targetColor = b.customColor;
+            
+            while(q.length > 0) {
+                const curr = q.shift();
+                cluster.push(curr);
+                countedInBomb.add(curr.id);
+                const neighbors = nearby.filter(n => {
+                    if (visited.has(n.id) || n.isPopped || countedInBomb.has(n.id)) return false;
+                    if (n.label !== 'normal' && n.label !== 'rainbow') return false;
+                    const matchColor = (n.label === 'rainbow' || n.customColor === targetColor || targetColor === 'ANY');
+                    return matchColor && Vector.magnitude(Vector.sub(n.position, curr.position)) < 55;
+                });
+                neighbors.forEach(n => { visited.add(n.id); q.push(n); });
+            }
+            
+            if (cluster.length >= 2) { bombTotalGain += cluster.length * 20; } else { bombTotalGain += 10; }
+        }
+
+        updateScore(bombTotalGain, pos.x, pos.y);
         showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
-	shakeScreen(25, false);
+        shakeScreen(25, false);
 
         spawnBurst(pos.x, pos.y, '#FF00FF', true);
-        // 炸弹核心强力冲击
         applyShockwave(pos, 300, 0.05);
         World.remove(engine.world, bombBody);
 
         for(let b of nearby) {
             b.isPopped = true;
-            // 每一级爆炸也产生小冲击
             applyShockwave(b.position, 80, 0.003);
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, true);
             World.remove(engine.world, b);
             await new Promise(r => setTimeout(r, 20));
         }
-        updateEnergy(nearby.length);
+        updateEnergy(nearby.length * 0.8);
     }
 
     function spawnBurst(x, y, color, isEpic) {
@@ -410,19 +427,14 @@ else return;
                 render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } 
             });
             World.add(engine.world, p);
-            const force = isEpic ? 0.025 : 0.012;
+            const fValue = isEpic ? 0.025 : 0.012;
             Body.applyForce(p, p.position, { 
-                x: (Math.random()-0.5)*force, 
-                y: (Math.random()-0.5)*force 
+                x: (Math.random()-0.5)*fValue, 
+                y: (Math.random()-0.5)*fValue 
             });
             setTimeout(() => World.remove(engine.world, p), isEpic ? 700 : 400);
         }
     }
-
-    render.canvas.addEventListener('mousedown', handleInput);
-    render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
-    for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
-    updateEnergy(0);
 
     function handleInput(e) {
         if (isGameOver) return;
@@ -433,6 +445,11 @@ else return;
         const target = Query.point(Composite.allBodies(engine.world).filter(b => !b.isPopped), mousePos).find(b => b.label === 'bomb' || b.label === 'normal' || b.label === 'rainbow');
         if (target) { if (target.label === 'bomb') triggerBomb(target); else chainExplode(target); }
     }
+
+    render.canvas.addEventListener('mousedown', handleInput);
+    render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
+    for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
+    updateEnergy(0);
 
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
