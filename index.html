@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>泡泡爆破：策略狂热版</title>
+    <title>泡泡爆破：狂热觉醒</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fascinate+Inline&family=Russo+One&display=swap');
 
@@ -27,58 +27,58 @@
             overflow: hidden;
             --angle: 0deg;
             animation: rotateBorder 4s linear infinite;
+            transition: background 0.1s ease;
         }
         @keyframes rotateBorder { to { --angle: 360deg; } }
         @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
 
+        /* 顶部 UI */
         #top-panel {
             position: absolute; top: 15px; width: 100%;
             display: flex; flex-direction: column; align-items: center;
             z-index: 100; pointer-events: none;
         }
-
-        #level-text {
-            color: #00ffff; font-size: 14px; letter-spacing: 2px;
-            text-shadow: 0 0 10px #00ffff; margin-bottom: 5px;
-        }
-
         #score-container {
             display: flex; flex-direction: column; align-items: center;
             background: rgba(0,0,0,0.7); padding: 10px 30px;
             border-radius: 15px; border: 2px solid #ff00ff;
             box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
         }
+        #current-score { font-size: 34px; color: #fff; font-family: 'Fascinate Inline'; text-shadow: 0 0 10px #ff00ff; }
+        #target-score { font-size: 16px; color: #00ffff; margin-top: -2px; opacity: 0.8; }
+        #goal-bar-container { width: 280px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 12px; overflow: hidden; border: 1.5px solid #333; }
+        #goal-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff); box-shadow: 0 0 15px #00ff99; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        #current-score {
-            font-size: 34px; color: #fff; font-family: 'Fascinate Inline';
-            text-shadow: 0 0 10px #ff00ff;
+        /* Spin 增加时的动画 */
+        #spin-text { 
+            margin-top:10px; color:#00ffff; font-size:14px; 
+            text-shadow:0 0 5px #00ffff; 
+            transition: transform 0.2s;
+        }
+        .spin-pop { animation: spinPopAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes spinPopAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+            100% { transform: scale(1); }
         }
 
-        #target-score {
-            font-size: 16px; color: #00ffff; margin-top: -2px;
-            opacity: 0.8;
-        }
-
-        #goal-bar-container {
-            width: 280px; height: 12px; background: rgba(255,255,255,0.1);
-            border-radius: 6px; margin-top: 12px; overflow: hidden;
-            border: 1.5px solid #333;
-        }
-        #goal-bar-fill {
-            width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff);
-            box-shadow: 0 0 15px #00ff99; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        #combo-display {
-            position: absolute; width: 100%; top: 220px;
+        /* 赞美文字动画 */
+        #praise-display {
+            position: absolute; width: 100%; top: 40%;
             text-align: center; color: #fff;
-            font-size: 64px; font-weight: 900;
-            opacity: 0; z-index: 100; pointer-events: none;
+            font-size: 55px; font-weight: 900;
+            z-index: 200; pointer-events: none;
             font-family: 'Fascinate Inline', cursive;
-            transform: scale(0.5) translateY(50px);
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
         }
-        #combo-display.show { opacity: 1; transform: scale(1) translateY(0); }
+        .praise-anim { animation: praiseIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes praiseIn {
+            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+            30% { transform: scale(1.4) rotate(10deg); opacity: 1; }
+            70% { transform: scale(1.2) rotate(-5deg); opacity: 1; }
+            100% { transform: scale(2) rotate(0deg); opacity: 0; }
+        }
 
         .floating-text {
             position: absolute; color: #fff; font-weight: 900; font-size: 28px;
@@ -91,6 +91,7 @@
             100% { transform: translate(-50%, -120px) scale(1); opacity: 0; }
         }
 
+        /* 摇杆 */
         #lever-container {
             position: absolute; top: 120px; right: 20px;
             width: 50px; height: 80px; z-index: 150;
@@ -99,21 +100,13 @@
         #lever-container.ready { cursor: pointer; opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 10px #ff00ff); }
         #lever-base { position: absolute; bottom: 0; width: 36px; height: 36px; background: #222; border-radius: 50%; left: 7px; border: 2px solid #fff; }
         #lever-stick { position: absolute; bottom: 15px; left: 20px; width: 10px; height: 50px; background: #fff; border-radius: 5px; transform-origin: bottom center; }
-        #lever-knob { position: absolute; top: -12px; left: -10px; width: 30px; height: 30px; background: #ff00ff; border-radius: 50%; }
+        #lever-knob { position: absolute; top: -12px; left: -10px; width: 30px; height: 30px; background: #ff00ff; border-radius: 50%; box-shadow: 0 0 10px #ff00ff; }
         #lever-container.pulling #lever-stick { transform: rotateX(75deg) scaleY(0.4); }
 
-        #level-up-overlay {
-            position: absolute; inset: 0; display: none;
-            justify-content: center; align-items: center;
-            background: rgba(255,0,255,0.3); z-index: 400;
-            pointer-events: none; animation: flash 0.6s;
-        }
+        #level-up-overlay { position: absolute; inset: 0; display: none; justify-content: center; align-items: center; background: rgba(255,0,255,0.3); z-index: 400; pointer-events: none; animation: flash 0.6s; }
         @keyframes flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
 
-        #gameOver {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.95);
-            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 500; color: #fff;
-        }
+        #gameOver { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 500; color: #fff; }
         button { margin-top: 30px; padding: 20px 60px; font-size: 24px; background: #ff00ff; color: #fff; border: none; border-radius: 50px; cursor: pointer; font-weight: 900; box-shadow: 0 0 20px #ff00ff; }
     </style>
 </head>
@@ -121,7 +114,7 @@
 
 <div id="game-container">
     <div id="top-panel">
-        <div id="level-text">LEVEL 1</div>
+        <div style="color:#00ffff; font-size:14px; letter-spacing:2px; margin-bottom:5px;" id="level-text">LEVEL 1</div>
         <div id="score-container">
             <div id="current-score">0</div>
             <div id="target-score">GOAL: 500</div>
@@ -129,10 +122,10 @@
         <div id="goal-bar-container">
             <div id="goal-bar-fill"></div>
         </div>
-        <div style="margin-top:10px; color:#00ffff; font-size:14px; text-shadow:0 0 5px #00ffff;" id="spin-text">SPINS: 0</div>
+        <div id="spin-text">SPINS: 0</div>
     </div>
 
-    <div id="combo-display">COMBO 0</div>
+    <div id="praise-display">SWEET!</div>
     <div id="level-up-overlay"><h1 style="color:#fff; font-size:42px; text-shadow:0 0 20px #ff00ff;">NEXT BLIND</h1></div>
     
     <div id="lever-container" onclick="pullLever()">
@@ -154,13 +147,15 @@
     const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Query, Vector } = Matter;
 
     const width = 375, height = 667;
-    let currentScore = 0, combo = 0, comboTimer = null;
+    let currentScore = 0;
     let isGameOver = false, isPulling = false;
     let level = 1, goalScore = 500, charges = 0, currentEnergy = 0;
 
     const COLORS = ['#FF0055', '#00FF99', '#00D9FF', '#FFD700', '#CC00FF'];
+    const PRAISES = ["SWEET!", "TASTY!", "DELICIOUS!", "FANTASTIC!", "UNBELIEVABLE!!", "DISCO KING!"];
+
     const engine = Engine.create();
-    engine.world.gravity.y = 1.5;
+    engine.world.gravity.y = 1.4;
 
     const container = document.getElementById('game-container');
     const render = Render.create({
@@ -180,8 +175,8 @@
 
     function createBubble(x, y) {
         let label = 'normal', rand = Math.random();
-        if (rand < 0.015) label = 'bomb'; 
-        else if (rand < 0.065) label = 'rainbow'; 
+        if (rand < 0.009) label = 'bomb'; 
+        else if (rand < 0.008) label = 'rainbow'; 
         let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const b = Bodies.circle(x, y, 22, {
             restitution: 0.7, friction: 0.02, label,
@@ -189,6 +184,51 @@
             render: { fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
         });
         World.add(engine.world, b);
+    }
+
+    // 屏幕震动
+    function shakeScreen(intensity = 5) {
+        container.animate([
+            { transform: `translate(${Math.random()*intensity}px, ${Math.random()*intensity}px)` },
+            { transform: `translate(${-Math.random()*intensity}px, ${-Math.random()*intensity}px)` },
+            { transform: `translate(${Math.random()*intensity*0.5}px, ${-Math.random()*intensity*0.5}px)` },
+            { transform: `translate(0,0)` }
+        ], { duration: 100, iterations: 2 });
+    }
+
+    // 屏幕背景闪烁
+    function flashBackground(color, duration = 150) {
+        container.style.background = color + "44"; // 约25%透明度
+        setTimeout(() => {
+            container.style.background = "radial-gradient(circle at center, #1a0033 0%, #000 100%)";
+        }, duration);
+    }
+
+    // 弹出赞美词并触发特效
+    function showPraise(count, x, y, customColor) {
+        let text = "";
+        let intensity = 0;
+        let flashDur = 150;
+
+        if (count >= 30) { text = PRAISES[5]; intensity = 20; flashDur = 400; }
+        else if (count >= 24) { text = PRAISES[4]; intensity = 15; flashDur = 300; }
+        else if (count >= 18) { text = PRAISES[3]; intensity = 12; flashDur = 250; }
+        else if (count >= 12) { text = PRAISES[2]; intensity = 9; flashDur = 200; }
+        else if (count >= 8) { text = PRAISES[1]; intensity = 6; flashDur = 150; }
+        else if (count >= 5) { text = PRAISES[0]; intensity = 4; flashDur = 100; }
+        else return;
+
+        const el = document.getElementById('praise-display');
+        el.innerText = text;
+        el.className = "";
+        void el.offsetWidth; // 触发重绘
+        el.className = "praise-anim";
+        const pColor = customColor || COLORS[Math.floor(Math.random()*COLORS.length)];
+        el.style.color = pColor;
+        
+        // 触发震动和闪烁
+        shakeScreen(intensity);
+        flashBackground(pColor, flashDur);
     }
 
     function updateScore(gain, x, y) {
@@ -202,33 +242,33 @@
     function nextLevel() {
         level++;
         goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
-        if (goalScore > 100000000) goalScore = 100000000;
         document.getElementById('level-text').innerText = `LEVEL ${level}`;
         document.getElementById('target-score').innerText = `GOAL: ${goalScore.toLocaleString()}`;
         document.getElementById('goal-bar-fill').style.width = '0%';
         const overlay = document.getElementById('level-up-overlay');
         overlay.style.display = 'flex';
         setTimeout(() => overlay.style.display = 'none', 600);
-        charges++; updateEnergy(0);
+        updateEnergy(0, true); 
     }
 
-    function updateEnergy(gain) {
+    function updateEnergy(gain, forceCharge = false) {
+        const oldCharges = charges;
         currentEnergy += gain;
         let required = 15 + level * 2;
         while (currentEnergy >= required) { currentEnergy -= required; charges++; }
-        document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
+        if (forceCharge) charges++;
+
+        const spinEl = document.getElementById('spin-text');
+        spinEl.innerText = `SPINS: ${charges}`;
+        
+        if (charges > oldCharges) {
+            spinEl.classList.remove('spin-pop');
+            void spinEl.offsetWidth; 
+            spinEl.classList.add('spin-pop');
+        }
+
         const lever = document.getElementById('lever-container');
         if (charges > 0) lever.classList.add('ready'); else lever.classList.remove('ready');
-    }
-
-    function updateComboUI() {
-        const el = document.getElementById('combo-display');
-        if (combo > 1) {
-            el.innerText = `COMBO ${combo}`;
-            el.classList.add('show');
-            clearTimeout(comboTimer);
-            comboTimer = setTimeout(() => el.classList.remove('show'), 1000);
-        } else el.classList.remove('show');
     }
 
     function showFloatingText(x, y, text) {
@@ -242,16 +282,18 @@
 
     window.pullLever = function() {
         if (isGameOver || isPulling || charges <= 0) return;
-        charges--; updateEnergy(0);
+        charges--; 
+        document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
+        if (charges <= 0) document.getElementById('lever-container').classList.remove('ready');
+        
         isPulling = true;
         document.getElementById('lever-container').classList.add('pulling');
         let count = 0;
-        // 数量提升至 36
         const spawnInterval = setInterval(() => {
             createBubble(Math.random() * (width - 60) + 30, -40);
             count++;
             if (count >= 36) clearInterval(spawnInterval);
-        }, 35); // 稍微加快生成速度
+        }, 30);
         setTimeout(() => {
             document.getElementById('lever-container').classList.remove('pulling');
             isPulling = false;
@@ -262,101 +304,89 @@
         if (startBody.isPopped) return;
         let targetColor = startBody.customColor;
 
-        if (startBody.label === 'rainbow') {
-            const neighbors = Composite.allBodies(engine.world).filter(b => !b.isStatic && !b.isPopped && b.label === 'normal' && b !== startBody && Vector.magnitude(Vector.sub(b.position, startBody.position)) < 65);
-            if (neighbors.length > 0) {
-                const counts = {};
-                neighbors.forEach(n => counts[n.customColor] = (counts[n.customColor]||0)+1);
-                let max = 0, cands = [];
-                for(let c in counts) { if(counts[c] > max){ max = counts[c]; cands = [c]; } else if(counts[c] === max) cands.push(c); }
-                targetColor = cands[Math.floor(Math.random()*cands.length)];
-            } else targetColor = COLORS[Math.floor(Math.random()*COLORS.length)];
-        }
-
         const toExplode = [];
         const processed = new Set();
         const queue = [startBody];
         processed.add(startBody.id);
 
-        let i = 0;
-        while(i < queue.length) {
-            const curr = queue[i++];
+        while(queue.length > 0) {
+            const curr = queue.shift();
             toExplode.push(curr);
             const neighbors = Composite.allBodies(engine.world).filter(b => {
                 if (b.isStatic || processed.has(b.id) || b.isPopped) return false;
                 if (b.label !== 'normal' && b.label !== 'rainbow') return false;
-                return (b.label === 'rainbow' || b.customColor === targetColor) && Vector.magnitude(Vector.sub(b.position, curr.position)) < 55;
+                return (b.label === 'rainbow' || b.customColor === targetColor || targetColor === 'ANY') && Vector.magnitude(Vector.sub(b.position, curr.position)) < 55;
             });
             neighbors.forEach(n => { processed.add(n.id); queue.push(n); });
         }
 
-        // --- 核心修改：必须有两个及以上泡泡才可以点破 ---
-        if (toExplode.length < 2) {
-            // 点击无效，可以加个轻微的缩放反馈
-            Body.scale(startBody, 1.1, 1.1);
-            setTimeout(() => Body.scale(startBody, 1/1.1, 1/1.1), 50);
-            return; 
+        if (toExplode.length < 2) return;
+
+        // 爽快感：顿帧 (Hit Stop)
+        if (toExplode.length > 10) {
+            engine.timing.timeScale = 0.1;
+            setTimeout(() => engine.timing.timeScale = 1, 50);
         }
 
-        if (toExplode.length >= 2) combo++; else combo = 0;
-        updateComboUI();
+        // 触发赞美和反馈
+        showPraise(toExplode.length, startBody.position.x, startBody.position.y, startBody.render.fillStyle);
         
         const baseValue = goalScore / 60;
-        const totalGain = toExplode.length * baseValue * (1 + combo * 0.2);
-        
-        updateScore(totalGain, startBody.position.x, startBody.position.y);
+        updateScore(toExplode.length * baseValue, startBody.position.x, startBody.position.y);
         updateEnergy(toExplode.length * 0.6);
         
         for(let b of toExplode) {
             b.isPopped = true;
-            spawnBurst(b.position.x, b.position.y, b.render.fillStyle);
+            spawnBurst(b.position.x, b.position.y, b.render.fillStyle, toExplode.length > 10);
             World.remove(engine.world, b);
-            if (toExplode.length > 1) await new Promise(r => setTimeout(r, 20));
+            if (toExplode.length > 1) await new Promise(r => setTimeout(r, 15));
         }
-        checkLoseCondition();
     }
 
     function triggerBomb(bombBody) {
         if (bombBody.isPopped) return;
         bombBody.isPopped = true;
         const pos = { ...bombBody.position };
-        const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 180);
-        const bombGain = goalScore * 0.25;
-        updateScore(bombGain, pos.x, pos.y);
+        const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 200);
+        
+        updateScore(goalScore * 0.25, pos.x, pos.y);
+        
+        // 炸弹也计入赞美词反馈
+        showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
+
         nearby.forEach(b => {
             b.isPopped = true;
-            spawnBurst(b.position.x, b.position.y, b.render.fillStyle);
+            spawnBurst(b.position.x, b.position.y, b.render.fillStyle, true);
             World.remove(engine.world, b);
         });
         updateEnergy(nearby.length);
-        spawnBurst(pos.x, pos.y, '#FF00FF');
+        spawnBurst(pos.x, pos.y, '#FF00FF', true);
         World.remove(engine.world, bombBody);
-        checkLoseCondition();
     }
 
-    function spawnBurst(x, y, color) {
-        for (let i = 0; i < 6; i++) {
-            const p = Bodies.circle(x, y, 3, { frictionAir: 0.05, collisionFilter: { group: -1 }, render: { fillStyle: color } });
+    // 增强的火花/烟花系统
+    function spawnBurst(x, y, color, isEpic) {
+        const count = isEpic ? 15 : 6;
+        for (let i = 0; i < count; i++) {
+            const p = Bodies.circle(x, y, isEpic ? 4 : 2, { 
+                frictionAir: 0.04, 
+                collisionFilter: { group: -1 }, 
+                render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } 
+            });
             World.add(engine.world, p);
-            Body.applyForce(p, p.position, { x: (Math.random()-0.5)*0.01, y: (Math.random()-0.5)*0.01 });
-            setTimeout(() => World.remove(engine.world, p), 400);
+            const force = isEpic ? 0.025 : 0.012;
+            Body.applyForce(p, p.position, { 
+                x: (Math.random()-0.5)*force, 
+                y: (Math.random()-0.5)*force 
+            });
+            setTimeout(() => World.remove(engine.world, p), isEpic ? 700 : 400);
         }
     }
 
-    function checkLoseCondition() {
-        setTimeout(() => {
-            const bubbles = Composite.allBodies(engine.world).filter(b => b.label === 'normal' || b.label === 'bomb' || b.label === 'rainbow');
-            if (bubbles.length === 0 && charges === 0 && !isPulling && currentScore < goalScore) endGame();
-        }, 1200);
-    }
-
-    function endGame() {
-        if (isGameOver) return;
-        isGameOver = true;
-        document.getElementById('gameOver').style.display = 'flex';
-        document.getElementById('finalScore').innerText = "FINAL LEVEL: " + level;
-        Runner.stop(runner);
-    }
+    render.canvas.addEventListener('mousedown', handleInput);
+    render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
+    for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
+    updateEnergy(0);
 
     function handleInput(e) {
         if (isGameOver) return;
@@ -367,11 +397,6 @@
         const target = Query.point(Composite.allBodies(engine.world).filter(b => !b.isPopped), mousePos).find(b => b.label === 'bomb' || b.label === 'normal' || b.label === 'rainbow');
         if (target) { if (target.label === 'bomb') triggerBomb(target); else chainExplode(target); }
     }
-
-    render.canvas.addEventListener('mousedown', handleInput);
-    render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
-    for(let i=0; i<40; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
-    updateEnergy(0);
 
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
