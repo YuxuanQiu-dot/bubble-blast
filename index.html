@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>泡泡爆破：霓虹气泡</title>
+    <title>泡泡爆破：霓虹节拍</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fascinate+Inline&family=Russo+One&display=swap');
 
@@ -45,19 +45,77 @@
         }
         #current-score { font-size: 34px; color: #fff; font-family: 'Fascinate Inline'; text-shadow: 0 0 10px #ff00ff; }
         #target-score { font-size: 16px; color: #00ffff; margin-top: -2px; opacity: 0.8; }
-        #goal-bar-container { width: 280px; height: 12px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 12px; overflow: hidden; border: 1.5px solid #333; }
-        #goal-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff); box-shadow: 0 0 15px #00ff99; transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        #energy-panel {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* 能量条 - 用于点亮下一盏灯 */
+        #energy-bar-container { width: 160px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; border: 1px solid rgba(0,255,255,0.3); }
+        #energy-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff); box-shadow: 0 0 10px #00ffff; transition: width 0.15s ease; }
 
+        #slots-container {
+            display: flex;
+            gap: 8px;
+            min-height: 18px;
+            align-items: center;
+        }
+        .energy-slot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .energy-slot.active {
+            background: #00ffff;
+            border-color: #fff;
+            box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff;
+            transform: scale(1.3);
+        }
+        /* 灯点亮时的超强闪烁动画 */
+        .energy-slot.lighting {
+            animation: slotLightUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes slotLightUp {
+            0% { transform: scale(1); background: rgba(255,255,255,0.05); box-shadow: none; }
+            20% { transform: scale(2.5); background: #fff; box-shadow: 0 0 40px #00ffff, 0 0 80px #00ffff, 0 0 120px rgba(0,255,255,0.8); }
+            40% { transform: scale(1.8); background: #00ffff; box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff; }
+            60% { transform: scale(2.2); background: #fff; box-shadow: 0 0 50px #00ffff, 0 0 100px #00ffff; }
+            80% { transform: scale(1.5); background: #00ffff; box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff; }
+            100% { transform: scale(1.3); background: #00ffff; box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff; }
+        }
+        /* 所有灯亮时的脉冲效果 */
+        .energy-slot.all-lit {
+            animation: allLitPulse 0.7s ease-in-out;
+        }
+        @keyframes allLitPulse {
+            0%, 100% { transform: scale(1.3); box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff; }
+            25% { transform: scale(1.8); box-shadow: 0 0 30px #fff, 0 0 60px #00ffff, 0 0 90px #00ffff; }
+            50% { transform: scale(1.5); box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+            75% { transform: scale(1.7); box-shadow: 0 0 25px #fff, 0 0 50px #00ffff; }
+        }
         #spin-text { 
-            margin-top:10px; color:#00ffff; font-size:14px; 
-            text-shadow:0 0 5px #00ffff; 
-            transition: transform 0.2s;
+            color:#ff00ff; font-size:18px; font-family: 'Fascinate Inline';
+            text-shadow:0 0 10px #ff00ff;
         }
         .spin-pop { animation: spinPopAnim 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes spinPopAnim {
             0% { transform: scale(1); }
-            50% { transform: scale(1.5); color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
+            50% { transform: scale(1.6); color: #fff; text-shadow: 0 0 30px #ff00ff; }
             100% { transform: scale(1); }
+        }
+
+        .energy-shard {
+            position: absolute;
+            width: 2px; height: 2px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 300;
         }
 
         #praise-display {
@@ -93,7 +151,7 @@
             width: 50px; height: 80px; z-index: 150;
             cursor: not-allowed; opacity: 0.3; transition: 0.3s;
         }
-        #lever-container.ready { cursor: pointer; opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 10px #ff00ff); }
+        #lever-container.ready { cursor: pointer; opacity: 1; filter: drop-shadow(0 0 10px #ff00ff); }
         #lever-base { position: absolute; bottom: 0; width: 36px; height: 36px; background: #222; border-radius: 50%; left: 7px; border: 2px solid #fff; }
         #lever-stick { position: absolute; bottom: 15px; left: 20px; width: 10px; height: 50px; background: #fff; border-radius: 5px; transform-origin: bottom center; }
         #lever-knob { position: absolute; top: -12px; left: -10px; width: 30px; height: 30px; background: #ff00ff; border-radius: 50%; box-shadow: 0 0 10px #ff00ff; }
@@ -115,10 +173,13 @@
             <div id="current-score">0</div>
             <div id="target-score">GOAL: 500</div>
         </div>
-        <div id="goal-bar-container">
-            <div id="goal-bar-fill"></div>
+        <div id="energy-panel">
+            <div id="energy-bar-container">
+                <div id="energy-bar-fill"></div>
+            </div>
+            <div id="slots-container"></div>
+            <div id="spin-text">SPINS: 0</div>
         </div>
-        <div id="spin-text">SPINS: 0</div>
     </div>
 
     <div id="praise-display">SWEET!</div>
@@ -145,12 +206,17 @@
     const width = 375, height = 667;
     let currentScore = 0;
     let isGameOver = false, isPulling = false;
-    let level = 1, goalScore = 500, charges = 0, currentEnergy = 0;
+    let level = 1, goalScore = 500, charges = 0;
+    
+    // 能量系统核心变量
+    let currentEnergy = 0;  // 当前能量（用于点亮下一盏灯）
+    let litSlots = 0;       // 已点亮的灯数量
+    let isResetting = false; // 标志是否正在重置灯（防止重置期间的能量处理冲突）
+    const ENERGY_PER_SLOT = 30; // 点亮一盏灯需要的能量
 
     const COLORS = ['#FF0055', '#00FF99', '#00D9FF', '#FFD700', '#CC00FF'];
     const PRAISES = ["SWEET!", "TASTY!", "DELICIOUS!", "FANTASTIC!", "UNBELIEVABLE!!", "DISCO KING!"];
 
-    // 物理引擎优化
     const engine = Engine.create();
     engine.world.gravity.y = 1.4;
     engine.enableSleeping = true; 
@@ -159,14 +225,7 @@
     const container = document.getElementById('game-container');
     const render = Render.create({
         element: container, engine: engine,
-        options: { 
-            width, 
-            height, 
-            wireframes: false, 
-            background: 'transparent', 
-            pixelRatio: window.devicePixelRatio,
-            showSleeping: false 
-        }
+        options: { width, height, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio, showSleeping: false }
     });
 
     Render.run(render);
@@ -179,19 +238,191 @@
         Bodies.rectangle(width + 25, height/2, 50, height, { isStatic: true })
     ]);
 
+    // 获取当前关卡需要的灯数量（修复：根据关卡等级决定，最多5个）
+    function getRequiredSlots() {
+        return Math.min(5, level);
+    }
+
+    // 获取能量增益乘数（随关卡增加，保持游戏平衡）
+    function getEnergyMultiplier() {
+        // level 1: 1x, level 2: 1.4x, level 3: 1.8x, level 4: 2.2x, level 5: 2.6x
+        return 1 + (level - 1) * 0.4;
+    }
+
     function createBubble(x, y) {
+        let color = COLORS[Math.floor(Math.random() * COLORS.length)];
         let label = 'normal', rand = Math.random();
         if (rand < 0.008) label = 'bomb'; 
-        else if (rand < 0.007)label = 'rainbow'; 
-        let color = COLORS[Math.floor(Math.random() * COLORS.length)];
+        else if (rand < 0.007) label = 'rainbow'; 
         const b = Bodies.circle(x, y, 22, {
-            restitution: 0.5, 
-            friction: 0.1,    
-            label,
+            restitution: 0.5, friction: 0.1, label,
             customColor: label === 'rainbow' ? 'ANY' : color,
             render: { fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
         });
         World.add(engine.world, b);
+    }
+
+    function spawnEnergyShard(startX, startY, color) {
+        const count = 4 + Math.floor(Math.random() * 3);
+        for(let i=0; i<count; i++) {
+            const shard = document.createElement('div');
+            shard.className = 'energy-shard';
+            shard.style.backgroundColor = color;
+            shard.style.boxShadow = `0 0 4px ${color}`;
+            shard.style.left = startX + 'px';
+            shard.style.top = startY + 'px';
+            container.appendChild(shard);
+
+            const target = document.getElementById('energy-bar-container').getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const targetX = (target.left + target.width/2) - containerRect.left;
+            const targetY = (target.top + target.height/2) - containerRect.top;
+
+            shard.animate([
+                { transform: 'scale(1) translate(0, 0)', opacity: 1 },
+                { transform: `scale(1.5) translate(${(Math.random()-0.5)*60}px, ${(Math.random()-0.5)*60}px)`, opacity: 1, offset: 0.1 },
+                { transform: `scale(0.1) translate(${targetX - startX}px, ${targetY - startY}px)`, opacity: 0.2 }
+            ], {
+                duration: 400 + Math.random() * 400,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+                fill: 'forwards'
+            }).onfinish = () => shard.remove();
+        }
+    }
+
+    // 核心能量逻辑（修复：灯点亮后先显示，再延迟重置）
+    function addEnergy(gain) {
+        const oldCharges = charges;
+        const requiredSlots = getRequiredSlots();
+        
+        // 应用能量乘数
+        const adjustedGain = gain * getEnergyMultiplier();
+        currentEnergy += adjustedGain;
+
+        // 如果正在重置灯，先累积能量，不处理点灯逻辑
+        if (isResetting) {
+            syncUI();
+            return;
+        }
+
+        // 能量条满了 -> 点亮一盏灯
+        let allLit = false;
+        while (currentEnergy >= ENERGY_PER_SLOT && !isResetting) {
+            currentEnergy -= ENERGY_PER_SLOT;
+            litSlots++;
+            
+            // 检查是否所有灯都亮了
+            if (litSlots >= requiredSlots) {
+                allLit = true;
+                isResetting = true;
+                break;
+            }
+        }
+
+        // 先更新UI，显示灯被点亮的状态
+        syncUI();
+        
+        // 如果有新灯被点亮，添加点亮动画
+        animateLitSlots();
+
+        // 如果所有灯都亮了 -> SPIN +1，然后延迟重置
+        if (allLit) {
+            charges++;
+            flashBackground('#00ffff', 400);
+            
+            // SPIN 增加时的动画
+            const spinEl = document.getElementById('spin-text');
+            spinEl.classList.remove('spin-pop');
+            void spinEl.offsetWidth; 
+            spinEl.classList.add('spin-pop');
+            
+            // 为所有亮着的灯添加脉冲动画
+            const allSlots = document.querySelectorAll('.energy-slot.active');
+            allSlots.forEach(slot => {
+                slot.classList.add('all-lit');
+            });
+            
+            // 延迟重置灯，让玩家看到所有灯都亮的效果
+            setTimeout(() => {
+                litSlots = 0;
+                isResetting = false;
+                syncUI();
+            }, 700);
+        } else if (charges > oldCharges) {
+            // SPIN 增加时的动画（兜底逻辑）
+            const spinEl = document.getElementById('spin-text');
+            spinEl.classList.remove('spin-pop');
+            void spinEl.offsetWidth; 
+            spinEl.classList.add('spin-pop');
+        }
+    }
+
+    // 为新点亮的灯添加动画效果
+    function animateLitSlots() {
+        const slots = document.querySelectorAll('.energy-slot.active');
+        slots.forEach((slot, index) => {
+            if (!slot.classList.contains('lighting')) {
+                slot.classList.add('lighting');
+                // 动画结束后移除类
+                setTimeout(() => slot.classList.remove('lighting'), 600);
+            }
+        });
+    }
+
+    function syncUI() {
+        const requiredSlots = getRequiredSlots();
+        
+        // 1. 更新能量条（代表点亮下一盏灯的进度）
+        const energyPercent = (currentEnergy / ENERGY_PER_SLOT) * 100;
+        document.getElementById('energy-bar-fill').style.width = Math.min(100, energyPercent) + '%';
+
+        // 2. 更新灯位
+        const containerUI = document.getElementById('slots-container');
+        containerUI.innerHTML = '';
+        for(let i=0; i<requiredSlots; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'energy-slot' + (i < litSlots ? ' active' : '');
+            containerUI.appendChild(slot);
+        }
+
+        // 3. 更新 SPIN 文本
+        document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
+
+        // 4. 更新摇杆状态
+        const lever = document.getElementById('lever-container');
+        if (charges > 0) lever.classList.add('ready'); else lever.classList.remove('ready');
+    }
+
+    function updateScore(gain, x, y) {
+        currentScore += gain;
+        document.getElementById('current-score').innerText = Math.floor(currentScore).toLocaleString();
+        showFloatingText(x, y, "+" + Math.floor(gain).toLocaleString());
+        
+        if (currentScore >= goalScore) {
+            nextLevel();
+        } else {
+            syncUI();
+        }
+    }
+
+    function nextLevel() {
+        level++;
+        currentScore = 0;
+        goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
+        
+        document.getElementById('level-text').innerText = `LEVEL ${level}`;
+        document.getElementById('target-score').innerText = `GOAL: ${goalScore.toLocaleString()}`;
+        
+        const overlay = document.getElementById('level-up-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => overlay.style.display = 'none', 600);
+        
+        syncUI();
+    }
+
+    function flashBackground(color, duration = 150) {
+        container.style.background = color + "44"; 
+        setTimeout(() => { container.style.background = "radial-gradient(circle at center, #1a0033 0%, #000 100%)"; }, duration);
     }
 
     function shakeScreen(intensity = 5, applyFactor = true) {
@@ -204,18 +435,8 @@
         ], { duration: 100, iterations: 1 });
     }
 
-    function flashBackground(color, duration = 150) {
-        container.style.background = color + "44"; 
-        setTimeout(() => {
-            container.style.background = "radial-gradient(circle at center, #1a0033 0%, #000 100%)";
-        }, duration);
-    }
-
     function showPraise(count, x, y, customColor) {
-        let text = "";
-        let intensity = 0;
-        let flashDur = 150;
-
+        let text = "", intensity = 0, flashDur = 150;
         if (count >= 20) { text = PRAISES[5]; intensity = 100; flashDur = 900; }
         else if (count >= 15) { text = PRAISES[4]; intensity = 60; flashDur = 700; }
         else if (count >= 12) { text = PRAISES[3]; intensity = 50; flashDur = 650; }
@@ -223,57 +444,12 @@
         else if (count >= 6)  { text = PRAISES[1]; intensity = 30; flashDur = 400; }
         else if (count >= 4)  { text = PRAISES[0]; intensity = 20; flashDur = 300; }
         else return;
-
         const el = document.getElementById('praise-display');
-        el.innerText = text;
-        el.className = "";
-        void el.offsetWidth; 
-        el.className = "praise-anim";
-        const pColor = customColor || COLORS[Math.floor(Math.random()*COLORS.length)];
-        el.style.color = pColor;
-        
+        el.innerText = text; el.className = "";
+        void el.offsetWidth; el.className = "praise-anim";
+        el.style.color = customColor || COLORS[Math.floor(Math.random()*COLORS.length)];
         shakeScreen(intensity);
-        flashBackground(pColor, flashDur);
-    }
-
-    function updateScore(gain, x, y) {
-        currentScore += gain;
-        document.getElementById('current-score').innerText = Math.floor(currentScore).toLocaleString();
-        document.getElementById('goal-bar-fill').style.width = Math.min(100, (currentScore / goalScore) * 100) + '%';
-        showFloatingText(x, y, "+" + Math.floor(gain).toLocaleString());
-        if (currentScore >= goalScore) nextLevel();
-    }
-
-    function nextLevel() {
-        level++;
-        goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
-        document.getElementById('level-text').innerText = `LEVEL ${level}`;
-        document.getElementById('target-score').innerText = `GOAL: ${goalScore.toLocaleString()}`;
-        document.getElementById('goal-bar-fill').style.width = '0%';
-        const overlay = document.getElementById('level-up-overlay');
-        overlay.style.display = 'flex';
-        setTimeout(() => overlay.style.display = 'none', 600);
-        updateEnergy(0, true); 
-    }
-
-    function updateEnergy(gain, forceCharge = false) {
-        const oldCharges = charges;
-        currentEnergy += gain;
-        let required = 25 + level * 4;
-        while (currentEnergy >= required) { currentEnergy -= required; charges++; }
-        if (forceCharge) charges++;
-
-        const spinEl = document.getElementById('spin-text');
-        spinEl.innerText = `SPINS: ${charges}`;
-        
-        if (charges > oldCharges) {
-            spinEl.classList.remove('spin-pop');
-            void spinEl.offsetWidth; 
-            spinEl.classList.add('spin-pop');
-        }
-
-        const lever = document.getElementById('lever-container');
-        if (charges > 0) lever.classList.add('ready'); else lever.classList.remove('ready');
+        flashBackground(el.style.color, flashDur);
     }
 
     function showFloatingText(x, y, text) {
@@ -286,11 +462,8 @@
     }
 
     window.pullLever = function() {
-        if (isGameOver || isPulling || charges <= 0) return;
-        charges--; 
-        document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
-        if (charges <= 0) document.getElementById('lever-container').classList.remove('ready');
-        
+        if (isPulling || charges <= 0) return;
+        charges--; syncUI();
         isPulling = true;
         document.getElementById('lever-container').classList.add('pulling');
         let count = 0;
@@ -305,16 +478,13 @@
         }, 600);
     };
 
-    function applyShockwave(pos, radius, force) {
-        const bodies = Composite.allBodies(engine.world);
-        bodies.forEach(b => {
+    function applyShockwave(pos, r, force) {
+        Composite.allBodies(engine.world).forEach(b => {
             if (b.isStatic) return;
             const dist = Vector.magnitude(Vector.sub(b.position, pos));
-            if (dist < radius && dist > 0) {
-                const diff = Vector.sub(b.position, pos);
-                const normal = Vector.normalise(diff);
-                const strength = (1 - dist/radius) * force;
-                Body.applyForce(b, b.position, Vector.mult(normal, strength));
+            if (dist < r && dist > 0) {
+                const n = Vector.normalise(Vector.sub(b.position, pos));
+                Body.applyForce(b, b.position, Vector.mult(n, (1 - dist/r) * force));
             }
         });
     }
@@ -323,40 +493,30 @@
         if (startBody.isPopped) return;
         let targetColor = startBody.customColor;
         const centerPos = { ...startBody.position };
-
         const toExplode = [];
-        const processed = new Set();
+        const processed = new Set([startBody.id]);
         const queue = [startBody];
-        processed.add(startBody.id);
 
         while(queue.length > 0) {
             const curr = queue.shift();
             toExplode.push(curr);
-            const neighbors = Composite.allBodies(engine.world).filter(b => {
+            Composite.allBodies(engine.world).filter(b => {
                 if (b.isStatic || processed.has(b.id) || b.isPopped) return false;
                 if (b.label !== 'normal' && b.label !== 'rainbow') return false;
                 return (b.label === 'rainbow' || b.customColor === targetColor || targetColor === 'ANY') && Vector.magnitude(Vector.sub(b.position, curr.position)) < 55;
-            });
-            neighbors.forEach(n => { processed.add(n.id); queue.push(n); });
+            }).forEach(n => { processed.add(n.id); queue.push(n); });
         }
 
         if (toExplode.length < 2) return;
-
         toExplode.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, centerPos)) - Vector.magnitudeSquared(Vector.sub(b.position, centerPos)));
-
-        if (toExplode.length > 10) {
-            engine.timing.timeScale = 0.1;
-            setTimeout(() => engine.timing.timeScale = 1, 50);
-        }
 
         showPraise(toExplode.length, centerPos.x, centerPos.y, startBody.render.fillStyle);
         updateScore(toExplode.length * 20, centerPos.x, centerPos.y);
-        updateEnergy(toExplode.length * 0.5);
+        addEnergy(toExplode.length * 1.5); // 消除泡泡获得能量（会自动应用乘数）
         
-        for(let i = 0; i < toExplode.length; i++) {
-            const b = toExplode[i];
-            if (!b) continue;
+        for(let b of toExplode) {
             b.isPopped = true;
+            spawnEnergyShard(b.position.x, b.position.y, b.render.fillStyle);
             applyShockwave(b.position, 100, 0.005);
             shakeScreen(1.5);
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, toExplode.length > 10);
@@ -371,67 +531,45 @@
         const pos = { ...bombBody.position };
         const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 200);
         
-        nearby.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, pos)) - Vector.magnitudeSquared(Vector.sub(b.position, pos)));
-
         let bombTotalGain = 0;
-        const countedInBomb = new Set();
-
+        const counted = new Set();
         for (const b of nearby) {
-            if (countedInBomb.has(b.id)) continue;
-            
+            if (counted.has(b.id)) continue;
             const cluster = [];
-            const q = [b];
-            const visited = new Set([b.id]);
-            const targetColor = b.customColor;
-            
+            const q = [b], v = new Set([b.id]), tc = b.customColor;
             while(q.length > 0) {
-                const curr = q.shift();
-                cluster.push(curr);
-                countedInBomb.add(curr.id);
-                const neighbors = nearby.filter(n => {
-                    if (visited.has(n.id) || n.isPopped || countedInBomb.has(n.id)) return false;
-                    if (n.label !== 'normal' && n.label !== 'rainbow') return false;
-                    const matchColor = (n.label === 'rainbow' || n.customColor === targetColor || targetColor === 'ANY');
-                    return matchColor && Vector.magnitude(Vector.sub(n.position, curr.position)) < 55;
-                });
-                neighbors.forEach(n => { visited.add(n.id); q.push(n); });
+                const c = q.shift(); cluster.push(c); counted.add(c.id);
+                nearby.filter(n => !v.has(n.id) && !n.isPopped && !counted.has(n.id) && (n.label==='normal'||n.label==='rainbow') && (n.label==='rainbow'||n.customColor===tc||tc==='ANY') && Vector.magnitude(Vector.sub(n.position, c.position)) < 55)
+                .forEach(n => { v.add(n.id); q.push(n); });
             }
-            
-            if (cluster.length >= 2) { bombTotalGain += cluster.length * 20; } else { bombTotalGain += 10; }
+            bombTotalGain += (cluster.length >= 2 ? cluster.length * 20 : 10);
         }
 
         updateScore(bombTotalGain, pos.x, pos.y);
         showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
         shakeScreen(25, false);
-
         spawnBurst(pos.x, pos.y, '#FF00FF', true);
         applyShockwave(pos, 300, 0.05);
         World.remove(engine.world, bombBody);
 
         for(let b of nearby) {
             b.isPopped = true;
+            spawnEnergyShard(b.position.x, b.position.y, b.render.fillStyle);
             applyShockwave(b.position, 80, 0.003);
             spawnBurst(b.position.x, b.position.y, b.render.fillStyle, true);
             World.remove(engine.world, b);
             await new Promise(r => setTimeout(r, 20));
         }
-        updateEnergy(nearby.length * 0.8);
+        addEnergy(nearby.length * 1.5); // 炸弹也获得能量（会自动应用乘数）
     }
 
     function spawnBurst(x, y, color, isEpic) {
         const count = isEpic ? 15 : 6;
         for (let i = 0; i < count; i++) {
-            const p = Bodies.circle(x, y, isEpic ? 4 : 2, { 
-                frictionAir: 0.04, 
-                collisionFilter: { group: -1 }, 
-                render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } 
-            });
+            const p = Bodies.circle(x, y, isEpic ? 4 : 2, { frictionAir: 0.04, collisionFilter: { group: -1 }, render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } });
             World.add(engine.world, p);
-            const forceValue = isEpic ? 0.025 : 0.012;
-            Body.applyForce(p, p.position, { 
-                x: (Math.random()-0.5)*forceValue, 
-                y: (Math.random()-0.5)*forceValue 
-            });
+            const f = isEpic ? 0.025 : 0.012;
+            Body.applyForce(p, p.position, { x: (Math.random()-0.5)*f, y: (Math.random()-0.5)*f });
             setTimeout(() => World.remove(engine.world, p), isEpic ? 700 : 400);
         }
     }
@@ -449,69 +587,29 @@
     render.canvas.addEventListener('mousedown', handleInput);
     render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
     for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
-    updateEnergy(0);
+    
+    syncUI();
 
-    // 气泡材质渲染系统
     Events.on(render, 'afterRender', () => {
         const ctx = render.context;
-        const bodies = Composite.allBodies(engine.world);
-
-        bodies.forEach(b => {
+        Composite.allBodies(engine.world).forEach(b => {
             if (b.isStatic || b.isPopped) return;
-            
-            const x = b.position.x;
-            const y = b.position.y;
-            const r = 22;
-            const color = b.render.fillStyle;
-
-            ctx.save();
-            ctx.globalAlpha = 0.8; // 整体通透感
-
-            // 1. 霓虹边缘光 (Neon Rim)
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // 2. 气泡薄膜渐变 (Soap Film Gradient)
-            // 创建一个从中心透明到边缘带色的径向渐变
+            const x = b.position.x, y = b.position.y, r = 22, color = b.render.fillStyle;
+            ctx.save(); ctx.globalAlpha = 0.8;
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
             const radialGrad = ctx.createRadialGradient(x, y, r * 0.7, x, y, r);
-            radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-            radialGrad.addColorStop(0.8, color + "33"); // 20% 透明度
-            radialGrad.addColorStop(1, color + "66");   // 40% 透明度
-            ctx.fillStyle = radialGrad;
-            ctx.fill();
-
-            // 3. 顶部主高光 (Main Highlight)
-            ctx.beginPath();
-            ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.2, 0, Math.PI * 2);
+            radialGrad.addColorStop(0, 'rgba(255, 255, 255, 0)'); radialGrad.addColorStop(0.8, color + "33"); radialGrad.addColorStop(1, color + "66");
+            ctx.fillStyle = radialGrad; ctx.fill();
+            ctx.beginPath(); ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.2, 0, Math.PI * 2);
             const highGrad = ctx.createRadialGradient(x - r*0.35, y - r*0.35, 0, x - r*0.35, y - r*0.35, r*0.2);
-            highGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-            highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = highGrad;
-            ctx.fill();
-
-            // 4. 底部反光弧 (Bottom Reflection)
-            ctx.beginPath();
-            ctx.arc(x, y, r * 0.75, 0.5, 2.5); // 绘制一段弧线
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-
-            // 5. 特殊标识
+            highGrad.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = highGrad; ctx.fill();
+            ctx.beginPath(); ctx.arc(x, y, r * 0.75, 0.5, 2.5); ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
             if (b.label === 'bomb') {
-                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                ctx.fillText("💣", x, y);
+                ctx.font = "20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; ctx.fillText("💣", x, y);
             } else if (b.label === 'rainbow') {
-                // 彩虹气泡：边缘颜色动态变化
-                const hue = (Date.now() / 10) % 360;
-                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
-                ctx.lineWidth = 3;
-                ctx.stroke();
+                const hue = (Date.now() / 10) % 360; ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`; ctx.lineWidth = 3; ctx.stroke();
             }
-
             ctx.restore();
         });
     });
