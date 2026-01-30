@@ -1,771 +1,1650 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>泡泡爆破：霓虹节拍</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fascinate+Inline&family=Russo+One&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wingfall Prototype - Modes</title>
+  <style>
+    html, body { margin:0; padding:0; background:#0b0f14; color:#e6e6e6; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .wrap { display:flex; flex-direction:column; align-items:center; gap:12px; padding:14px; }
+    .card {
+      width:min(860px, 96vw);
+      border:1px solid #223044;
+      border-radius:16px;
+      background:#0f1722;
+      padding:14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    h1 { font-size:18px; margin:0 0 10px; }
+    .muted { font-size:12px; opacity:0.82; line-height:1.4; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:stretch; }
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            background: #000;
-            display: flex; justify-content: center; align-items: center;
-            overflow: hidden; touch-action: none;
-            font-family: 'Russo One', sans-serif;
-            -webkit-user-select: none; user-select: none;
-        }
+    .btn {
+      padding:10px 12px;
+      border:1px solid #223044;
+      border-radius:12px;
+      background:#132033;
+      color:#e6e6e6;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btnPrimary { background:#173052; border-color:#2b4f7a; }
 
-        #game-container {
-            position: relative;
-            width: 375px; height: 667px;
-            background: radial-gradient(circle at center, #1a0033 0%, #000 100%);
-            box-shadow: 0 0 100px rgba(255, 0, 255, 0.4);
-            border: 8px solid;
-            border-image: linear-gradient(var(--angle), #ff00ff, #00ffff, #ff00ff) 1;
-            border-radius: 24px;
-            overflow: hidden;
-            --angle: 0deg;
-            animation: rotateBorder 4s linear infinite;
-            transition: background 0.1s ease;
-        }
-        @keyframes rotateBorder { to { --angle: 360deg; } }
-        @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+    .hud {
+      width:min(860px, 96vw);
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .panel { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .pill { padding:6px 10px; border:1px solid #223044; border-radius:999px; background:#0f1722; font-size:12px; }
 
-        #top-panel {
-            position: absolute; top: 15px; width: 100%;
-            display: flex; flex-direction: column; align-items: center;
-            z-index: 100; pointer-events: none;
-        }
-        #score-container {
-            display: flex; flex-direction: column; align-items: center;
-            background: rgba(0,0,0,0.7); padding: 10px 30px;
-            border-radius: 15px; border: 2px solid #ff00ff;
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
-        }
-        #current-score { font-size: 34px; color: #fff; font-family: 'Fascinate Inline'; text-shadow: 0 0 10px #ff00ff; }
-        #target-score { font-size: 16px; color: #00ffff; margin-top: -2px; opacity: 0.8; }
-        
-        #energy-panel {
-            margin-top: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        /* 能量条 - 用于点亮下一盏灯 */
-        #energy-bar-container { width: 160px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; border: 1px solid rgba(0,255,255,0.3); }
-        #energy-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #00ff99, #00ffff); box-shadow: 0 0 10px #00ffff; transition: width 0.15s ease; }
+    .stage { position:relative; width:min(860px, 96vw); }
+    canvas { width:100%; height:auto; background:#101825; border:1px solid #223044; border-radius:14px; touch-action:none; display:block; }
 
-        #slots-container {
-            display: flex;
-            gap: 8px;
-            min-height: 18px;
-            align-items: center;
-        }
-        .energy-slot {
-            width: 12px; height: 12px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .energy-slot.active {
-            background: #00ffff;
-            border-color: #fff;
-            box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff;
-            transform: scale(1.3);
-        }
-        /* 灯点亮时的超强闪烁动画 */
-        .energy-slot.lighting {
-            animation: slotLightUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes slotLightUp {
-            0% { transform: scale(1); background: rgba(255,255,255,0.05); box-shadow: none; }
-            20% { transform: scale(2.5); background: #fff; box-shadow: 0 0 40px #00ffff, 0 0 80px #00ffff, 0 0 120px rgba(0,255,255,0.8); }
-            40% { transform: scale(1.8); background: #00ffff; box-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff; }
-            60% { transform: scale(2.2); background: #fff; box-shadow: 0 0 50px #00ffff, 0 0 100px #00ffff; }
-            80% { transform: scale(1.5); background: #00ffff; box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff; }
-            100% { transform: scale(1.3); background: #00ffff; box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff; }
-        }
-        /* 所有灯亮时的脉冲效果 */
-        .energy-slot.all-lit {
-            animation: allLitPulse 0.7s ease-in-out;
-        }
-        @keyframes allLitPulse {
-            0%, 100% { transform: scale(1.3); box-shadow: 0 0 8px #00ffff, 0 0 15px #00ffff; }
-            25% { transform: scale(1.8); box-shadow: 0 0 30px #fff, 0 0 60px #00ffff, 0 0 90px #00ffff; }
-            50% { transform: scale(1.5); box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
-            75% { transform: scale(1.7); box-shadow: 0 0 25px #fff, 0 0 50px #00ffff; }
-        }
-        #spin-text { 
-            color:#ff00ff; font-size:18px; font-family: 'Fascinate Inline';
-            text-shadow:0 0 10px #ff00ff;
-            position: relative;
-        }
-        .spin-pop { animation: spinPopAnim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes spinPopAnim {
-            0% { transform: scale(1) rotate(0deg); color: #ff00ff; }
-            15% { transform: scale(2.5) rotate(-10deg); color: #fff; text-shadow: 0 0 40px #ff00ff, 0 0 80px #ff00ff, 0 0 120px #ff00ff; }
-            30% { transform: scale(1.8) rotate(8deg); color: #00ffff; text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff; }
-            45% { transform: scale(2.2) rotate(-5deg); color: #fff; text-shadow: 0 0 50px #ff00ff, 0 0 100px #ff00ff; }
-            60% { transform: scale(1.6) rotate(3deg); color: #ffff00; text-shadow: 0 0 40px #ffff00; }
-            75% { transform: scale(1.3) rotate(-2deg); color: #ff00ff; text-shadow: 0 0 20px #ff00ff; }
-            100% { transform: scale(1) rotate(0deg); color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
-        }
-        /* SPIN +1 浮动提示 */
-        .spin-plus-one {
-            position: absolute;
-            color: #00ffff;
-            font-size: 28px;
-            font-family: 'Fascinate Inline';
-            font-weight: 900;
-            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
-            pointer-events: none;
-            z-index: 250;
-            animation: spinPlusOneAnim 1s ease-out forwards;
-        }
-        @keyframes spinPlusOneAnim {
-            0% { transform: translate(-50%, 0) scale(0) rotate(-20deg); opacity: 0; }
-            20% { transform: translate(-50%, -20px) scale(2) rotate(10deg); opacity: 1; }
-            40% { transform: translate(-50%, -40px) scale(1.5) rotate(-5deg); opacity: 1; }
-            100% { transform: translate(-50%, -80px) scale(1) rotate(0deg); opacity: 0; }
-        }
+    .overlay {
+      position:absolute; inset:0;
+      display:none; align-items:center; justify-content:center;
+      border-radius:14px;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
+    }
+    .overlayCard{
+      width:min(420px, 90%);
+      border:1px solid #223044;
+      border-radius:16px;
+      background:#0f1722;
+      padding:16px 16px 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      text-align:center;
+    }
+    .overlayTitle{ font-size:18px; margin:0 0 6px 0; letter-spacing:0.2px; }
+    .overlaySub{ font-size:12px; opacity:0.85; margin:0 0 12px 0; line-height:1.4; }
 
-        .energy-shard {
-            position: absolute;
-            width: 2px; height: 2px;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 300;
-        }
+    .nextWrap { display:flex; align-items:center; gap:8px; }
+    .shapeBox { width:28px; height:28px; border:1px solid #223044; border-radius:10px; display:grid; place-items:center; background:#0f1722; transition: all 0.2s; }
+    .shapeBox.highlight { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,0.4); transform: scale(1.15); }
+    .shapeBox.filled { background: #1a2a3a; }
+    
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+      100% { transform: scale(1); }
+    }
+    .pop-anim { animation: pop 0.3s ease-out; }
 
-        #praise-display {
-            position: absolute; width: 100%; top: 40%;
-            text-align: center; color: #fff;
-            font-size: 55px; font-weight: 900;
-            z-index: 200; pointer-events: none;
-            font-family: 'Fascinate Inline', cursive;
-            opacity: 0;
-            text-shadow: 0 0 20px rgba(255,255,255,0.5);
-        }
-        .praise-anim { animation: praiseIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes praiseIn {
-            0% { transform: scale(0) rotate(-20deg); opacity: 0; }
-            30% { transform: scale(1.4) rotate(10deg); opacity: 1; }
-            70% { transform: scale(1.2) rotate(-5deg); opacity: 1; }
-            100% { transform: scale(2) rotate(0deg); opacity: 0; }
-        }
+    .reqWrap { display:flex; align-items:center; gap:8px; background: rgba(255,255,255,0.03); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+    .labelSub { font-size:9px; opacity:0.5; display:block; text-transform: uppercase; margin-top: -2px; }
 
-        .floating-text {
-            position: absolute; color: #fff; font-weight: 900; font-size: 28px;
-            text-shadow: 0 0 10px #ff00ff; pointer-events: none; z-index: 200;
-            animation: floatPop 0.8s ease-out forwards;
-        }
-        @keyframes floatPop {
-            0% { transform: translate(-50%, 0) scale(0); opacity: 0; }
-            25% { opacity: 1; transform: translate(-50%, -40px) scale(1.4); }
-            100% { transform: translate(-50%, -120px) scale(1); opacity: 0; }
-        }
+    #feedbackText {
+      position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 48px; font-weight: 900; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.5);
+      pointer-events: none; opacity: 0; transition: all 0.3s; z-index: 100;
+    }
+    .feedback-pop { opacity: 1 !important; transform: translate(-50%, -60%) scale(1.2) !important; }
+    .label { font-size:12px; opacity:0.82; }
+    .reqRow { display:flex; gap:8px; align-items:center; }
 
-        #lever-container {
-            position: absolute; top: 120px; right: 20px;
-            width: 50px; height: 80px; z-index: 150;
-            cursor: not-allowed; opacity: 0.3; transition: 0.3s;
-        }
-        #lever-container.ready { cursor: pointer; opacity: 1; filter: drop-shadow(0 0 10px #ff00ff); }
-        #lever-base { position: absolute; bottom: 0; width: 36px; height: 36px; background: #222; border-radius: 50%; left: 7px; border: 2px solid #fff; }
-        #lever-stick { position: absolute; bottom: 15px; left: 20px; width: 10px; height: 50px; background: #fff; border-radius: 5px; transform-origin: bottom center; }
-        #lever-knob { position: absolute; top: -12px; left: -10px; width: 30px; height: 30px; background: #ff00ff; border-radius: 50%; box-shadow: 0 0 10px #ff00ff; }
-        #lever-container.pulling #lever-stick { transform: rotateX(75deg) scaleY(0.4); }
+    #menuPage { display:block; }
+    #gamePage { display:none; }
+    .modeCard { flex:1; min-width: 220px; }
+    .modeTitle { font-size:14px; margin:0 0 6px; }
+    .modeDesc { font-size:12px; opacity:0.82; line-height:1.4; margin:0 0 10px; }
 
-        #level-up-overlay { position: absolute; inset: 0; display: none; justify-content: center; align-items: center; background: rgba(255,0,255,0.3); z-index: 400; pointer-events: none; animation: flash 0.6s; }
-        @keyframes flash { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-
-        #gameOver { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 500; color: #fff; }
-        button { margin-top: 30px; padding: 20px 60px; font-size: 24px; background: #ff00ff; color: #fff; border: none; border-radius: 50px; cursor: pointer; font-weight: 900; box-shadow: 0 0 20px #ff00ff; }
-    </style>
+    .upgList { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+    .upgBtn { width:100%; text-align:left; }
+    .upgName { font-size:13px; font-weight:700; margin-bottom:2px; }
+    .upgDesc { font-size:12px; opacity:0.86; line-height:1.35; }
+  </style>
 </head>
 <body>
+<div class="wrap">
 
-<div id="game-container">
-    <div id="top-panel">
-        <div style="color:#00ffff; font-size:14px; letter-spacing:2px; margin-bottom:5px;" id="level-text">LEVEL 1</div>
-        <div id="score-container">
-            <div id="current-score">0</div>
-            <div id="target-score">GOAL: 500</div>
+  <!-- MENU PAGE -->
+  <div id="menuPage" class="card">
+    <h1>Wingfall Prototype</h1>
+    <p class="muted">
+      Core: match bullet shape to enemy shape. Auto-fire on a beat. Req fills with solid icons (order-agnostic).
+    </p>
+    <div class="row">
+      <div class="card modeCard" style="background:#0b1420;">
+        <p class="modeTitle"><b>Classic</b> — Random</p>
+        <p class="modeDesc">Continuous fall, random X. Aiming line helps prevent “eyeballing”.</p>
+        <button class="btn btnPrimary" data-start="classic">Start Classic</button>
+      </div>
+
+      <div class="card modeCard" style="background:#0b1420;">
+        <p class="modeTitle"><b>Lanes</b> — Column Dense</p>
+        <p class="modeDesc">6 lanes (mobile-friendly). Spawns in small batches to form pressure walls.</p>
+        <button class="btn btnPrimary" data-start="lanes">Start Lanes</button>
+      </div>
+
+      <div class="card modeCard" style="background:#0b1420;">
+        <p class="modeTitle"><b>Rows</b> — Row Step</p>
+        <p class="modeDesc">Grid steps down (Tetris pressure). Uses 6 columns for readability.</p>
+        <button class="btn btnPrimary" data-start="rows">Start Rows</button>
+      </div>
+
+      <div class="card modeCard" style="background:#0b1420;">
+        <p class="modeTitle"><b>Pinball</b> — Bounce Shot</p>
+        <p class="modeDesc">Angled shots bounce off walls. Wrong hits don’t waste the bullet (keeps flow).</p>
+        <button class="btn btnPrimary" data-start="pinball">Start Pinball</button>
+      </div>
+
+      <!-- NEW -->
+      <div class="card modeCard" style="background:#0b1420;">
+        <p class="modeTitle"><b>RowTurn</b> — Click Step + Roguelike</p>
+        <p class="modeDesc">Click = shoot once, then enemies step down 1 row. Level up for 3-choice upgrades.</p>
+        <button class="btn btnPrimary" data-start="rowturn">Start RowTurn</button>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:10px;">
+      Controls: A/D or ←/→ to move. Mobile: drag. Press R to restart.
+    </p>
+  </div>
+
+  <!-- GAME PAGE -->
+  <div id="gamePage">
+    <div class="hud">
+      <div class="panel">
+        <div class="pill" id="modePill">Mode: -</div>
+        <div class="pill" id="scorePill">Score: 0</div>
+        <div class="pill" id="xpPill" style="display:none;">Lv 1 · XP 0/10</div>
+        <input id="xpSlider" type="range" min="0" max="10" value="0" disabled style="display:none; width:180px;">
+        <div class="pill" id="statusPill">Running</div>
+      </div>
+
+      <div class="panel">
+        <div class="nextWrap">
+          <span class="label">Next</span>
+          <div class="shapeBox" id="nextUI"></div>
         </div>
-        <div id="energy-panel">
-            <div id="energy-bar-container">
-                <div id="energy-bar-fill"></div>
-            </div>
-            <div id="slots-container"></div>
-            <div id="spin-text">SPINS: 0</div>
+
+        <div class="reqWrap">
+          <div>
+            <span class="label">Req</span>
+            <span class="labelSub">Match Shapes</span>
+          </div>
+          <div class="reqRow" id="reqUI"></div>
         </div>
+
+        <button class="btn" id="restartBtn">Restart</button>
+        <button class="btn" id="backBtn">Back</button>
+      </div>
     </div>
 
-    <div id="praise-display">SWEET!</div>
-    <div id="level-up-overlay"><h1 style="color:#fff; font-size:42px; text-shadow:0 0 20px #ff00ff;">NEXT BLIND</h1></div>
-    
-    <div id="lever-container" onclick="pullLever()">
-        <div id="lever-base"></div>
-        <div id="lever-stick"><div id="lever-knob"></div></div>
+    <div class="stage">
+      <canvas id="c" width="860" height="540"></canvas>
+      <div id="feedbackText">TASK COMPLETE</div>
+
+      <!-- Game Over -->
+      <div class="overlay" id="overlay">
+        <div class="overlayCard">
+          <h3 class="overlayTitle">Game Over</h3>
+          <p class="overlaySub" id="overlaySub">An enemy reached the bottom line.</p>
+          <div style="display:flex; justify-content:center; gap:10px;">
+            <button class="btn btnPrimary" id="overlayRestartBtn">Restart</button>
+            <button class="btn" id="overlayBackBtn">Back</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW: Upgrade Overlay -->
+      <div class="overlay" id="upgradeOverlay">
+        <div class="overlayCard">
+          <h3 class="overlayTitle">Level Up</h3>
+          <p class="overlaySub" id="upgradeSub">Choose 1 upgrade.</p>
+          <div class="upgList" id="upgradeList"></div>
+        </div>
+      </div>
     </div>
 
-    <div id="gameOver">
-        <h1 style="font-size: 50px; color:#ff00ff;">BUSTED</h1>
-        <p id="finalScore" style="font-size: 32px; margin-top:20px;">0</p>
-        <button onclick="location.reload()">NEW RUN</button>
+    <div class="muted" style="width:min(860px, 96vw);">
+      Beat hint: ring fills up to the firing moment. Aim line shows where your shot will travel.
     </div>
+  </div>
+
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
 <script>
 (() => {
-    const { Engine, Render, Runner, World, Bodies, Body, Events, Composite, Query, Vector } = Matter;
+  const menuPage = document.getElementById('menuPage');
+  const gamePage = document.getElementById('gamePage');
 
-    const width = 375, height = 667;
-    let currentScore = 0;
-    let isGameOver = false, isPulling = false;
-    let level = 1, goalScore = 500, charges = 0;
-    
-    // 能量系统核心变量
-    let currentEnergy = 0;  // 当前能量（用于点亮下一盏灯）
-    let litSlots = 0;       // 已点亮的灯数量
-    let isResetting = false; // 标志是否正在重置灯（防止重置期间的能量处理冲突）
-    const ENERGY_PER_SLOT = 30; // 点亮一盏灯需要的能量
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
 
-    const COLORS = ['#FF0055', '#00FF99', '#00D9FF', '#FFD700', '#CC00FF'];
-    const PRAISES = ["SWEET!", "TASTY!", "DELICIOUS!", "FANTASTIC!", "UNBELIEVABLE!!", "DISCO KING!"];
+  const uiMode = document.getElementById('modePill');
+  const uiScore = document.getElementById('scorePill');
+  const uiXP = document.getElementById('xpPill');
+  const uiXPSlider = document.getElementById('xpSlider');
+  const uiStatus = document.getElementById('statusPill');
+  const uiReq = document.getElementById('reqUI');
+  const uiNext = document.getElementById('nextUI');
 
-    const engine = Engine.create();
-    engine.world.gravity.y = 1.4;
-    engine.enableSleeping = true; 
-    engine.positionIterations = 10; 
+  const restartBtn = document.getElementById('restartBtn');
+  const backBtn = document.getElementById('backBtn');
 
-    const container = document.getElementById('game-container');
-    const render = Render.create({
-        element: container, engine: engine,
-        options: { width, height, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio, showSleeping: false }
+  const overlay = document.getElementById('overlay');
+  const overlaySub = document.getElementById('overlaySub');
+  const overlayRestartBtn = document.getElementById('overlayRestartBtn');
+  const overlayBackBtn = document.getElementById('overlayBackBtn');
+
+  const upgradeOverlay = document.getElementById('upgradeOverlay');
+  const upgradeList = document.getElementById('upgradeList');
+  const upgradeSub = document.getElementById('upgradeSub');
+
+  // ====== Core Tunables ======
+  const shotInterval = 2.0;          // seconds per auto shot
+  const previewCount = 1;            // show ONE
+  const shapes = ['circle', 'square', 'triangle', 'pentagon', 'diamond'];
+  const playerSpeed = 420;
+
+  const laneCountGlobal = 6;
+
+  // Bullet feel
+  const bulletSpeedLinear = 560;
+  const bulletSpeedPinball = 520;
+  const pinballMaxLife = 3.2;
+  const pinballMaxBounces = 6;
+  // ==========================
+
+  const modeTuning = {
+    classic: {
+      enemySpawnInterval: 1.8,   // 1.25 -> 1.8
+      enemyFallSpeed: 12,        // 18 -> 12
+      enemySize: 28,
+    },
+    lanes: {
+      enemySpawnInterval: 2.5,   // 1.75 -> 2.5
+      enemyFallSpeed: 10,        // 16 -> 10
+      enemySize: 28,
+      laneCount: laneCountGlobal,
+      batchMin: 1,               // 2 -> 1
+      batchMax: 2                // 3 -> 2
+    },
+    rows: {
+      rowStepInterval: 2.8,      // 1.85 -> 2.8
+      rowFillChance: 0.45,       // 0.62 -> 0.45
+      enemySize: 28,
+      laneCount: laneCountGlobal,
+      cellH: 38
+    },
+    pinball: {
+      rowStepInterval: 3.5,      // 2.10 -> 3.5
+      rowFillChance: 0.6,        // 0.82 -> 0.6
+      enemySize: 28,
+      laneCount: laneCountGlobal,
+      cellH: 36
+    },
+    // NEW
+    rowturn: {
+      rowFillChance: 0.65,  // 0.8 -> 0.65
+      enemySize: 28,
+      laneCount: 20,
+      cellH: 36,
+      spawnEveryTurns: 1,
+      stepDownEveryShot: true
+    }
+  };
+
+  const reward = {
+    scoreBonus: 80,
+    slowTimeSeconds: 1.2,
+    slowFactor: 0.45,
+    clearReqShapes: true
+  };
+
+  // Optional fire beep
+  const audio = { enabled: true, ctx: null };
+  function beep() {
+    if (!audio.enabled) return;
+    try {
+      if (!audio.ctx) audio.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ac = audio.ctx;
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.value = 0.0001;
+      o.connect(g); g.connect(ac.destination);
+      o.start();
+      const t = ac.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.stop(t + 0.13);
+    } catch {}
+  }
+
+  const shapeColors = {
+    circle:   { stroke: '#55d6ff', fill: '#0f2a36' },
+    square:   { stroke: '#8bff6a', fill: '#162a16' },
+    triangle: { stroke: '#ff6ad5', fill: '#2b1430' },
+    pentagon: { stroke: '#ffb86c', fill: '#332414' },
+    diamond:  { stroke: '#bd93f9', fill: '#241b36' },
+  };
+
+  const W = canvas.width, H = canvas.height;
+  const bottomLineY = H - 56;
+
+  const rand = (a,b) => a + Math.random()*(b-a);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+  // Game state
+  let running = false;
+  let score = 0;
+  let mode = 'classic';
+
+  const player = { x: W/2, y: H - 42, shape: 'circle' };
+  let mousePos = { x: W/2, y: 0 };
+  const bullets = [];
+  const enemies = [];
+
+  // timers
+  let shotTimer = 0;
+  let spawnTimer = 0;
+  let rowTimer = 0;
+
+  // VFX
+  let fireFlash = 0;
+  let firePulse = 0;
+  let screenShake = 0;
+
+  // slow time
+  let slowTimeLeft = 0;
+
+  // bullet queue
+  const bulletQueue = [];
+
+  // Requirement (3 slots), order-agnostic, duplicates supported
+  let requirement = [];
+  let reqFilled = [];
+  const protectedState = { active: 0, forbidden: [] };
+  const pityState = { count: 3 }; // 每局 3 次保底机会
+
+  // ===== RowTurn + Roguelike =====
+  let turnCount = 0;
+  let turnPending = false; 
+
+  const xpState = {
+    enabled: false,
+    level: 1,
+    xp: 0,
+    xpToNext: 10,
+    // upgrade effects
+    pierce: 0,                 // each match consumes 1 pierce, 0 means no pierce
+    bounceBonus: 0,            // extra bounces
+    bulletSpeedBonus: 0,       // +
+    doubleShot: 0,             // +1 bullet per click
+    clusterClear: false,       // enable cluster>=3 clear
+    dualTC: false,             // triangle/circle bullets match both triangle & circle enemies
+    aoeOnCircleHit: false,     // circle hit triggers 1-cell adjacency clear, bullet consumed
+    drill: false,              // clear one enemy above
+    diamondChain: false,       // clear one random same-shape on diamond hit
+    ghostPass: 0,              // pass through mismatched shapes N times
+    noPierceRule: false,       // forces pierce = 0 (if you want a “hard rule” upgrade)
+    xpGainBonus: 0,            // +% xp
+  };
+
+  const UPGRADES = [
+    {
+      id:'pierce1',
+      name:'Piercing Rounds I',
+      desc:'Matched hits do not consume the bullet (1 pierce). Still bounces.',
+      max: 3,
+      apply: () => { xpState.pierce += 1; xpState.noPierceRule = false; }
+    },
+    {
+      id:'drill',
+      name:'Vertical Drill',
+      desc:'Successful matches also destroy the enemy directly ABOVE the target.',
+      max: 1,
+      apply: () => { xpState.drill = true; }
+    },
+    {
+      id:'diamondChain',
+      name:'Diamond Chain',
+      desc:'Diamond matches clear 1 random enemy of the SAME shape elsewhere.',
+      max: 1,
+      apply: () => { xpState.diamondChain = true; }
+    },
+    {
+      id:'ghost',
+      name:'Ghost Rounds',
+      desc:'Bullets pass through mismatched shapes (up to 2 times). Only matched hits consume.',
+      max: 2,
+      apply: () => { xpState.ghostPass += 2; }
+    },
+    {
+      id:'bounce',
+      name:'Extra Bounces',
+      desc:'RowTurn bullets can bounce +2 times before disappearing.',
+      max: 3,
+      apply: () => { xpState.bounceBonus += 2; }
+    },
+    {
+      id:'double',
+      name:'Double Shot',
+      desc:'Each click fires +1 extra bullet (same angle spread).',
+      max: 2,
+      apply: () => { xpState.doubleShot += 1; }
+    },
+    {
+      id:'cluster',
+      name:'Cluster Clear',
+      desc:'In RowTurn: if you kill an enemy that is part of a same-shape cluster (size ≥3), clear the whole cluster.',
+      max: 1,
+      apply: () => { xpState.clusterClear = true; }
+    },
+    {
+      id:'dualTC',
+      name:'Dual-Shape Ammo (△ + ○)',
+      desc:'Triangle/Circle bullets can kill BOTH triangle and circle enemies.',
+      max: 1,
+      apply: () => { xpState.dualTC = true; }
+    },
+    {
+      id:'aoeCircle',
+      name:'Circle AOE Burst',
+      desc:'If you hit a circle enemy, explode and clear its 4-adjacent cells.',
+      max: 1,
+      apply: () => { xpState.aoeOnCircleHit = true; }
+    },
+    {
+      id:'xp',
+      name:'More XP',
+      desc:'+20% XP gained (kills + cluster bonuses).',
+      max: 5,
+      apply: () => { xpState.xpGainBonus += 0.20; }
+    },
+  ];
+
+  const upgradeLevels = new Map(); // id -> level
+
+  function isUpgradeMaxed(id) {
+    const u = UPGRADES.find(x => x.id === id);
+    const lv = upgradeLevels.get(id) || 0;
+    return u ? (lv >= u.max) : true;
+  }
+
+  function gainXP(amountRaw) {
+    if (!xpState.enabled) return;
+    const mult = 1 + (xpState.xpGainBonus || 0);
+    const amount = amountRaw * mult;
+    xpState.xp += amount;
+
+    while (xpState.xp >= xpState.xpToNext) {
+      xpState.xp -= xpState.xpToNext;
+      xpState.level += 1;
+      xpState.xpToNext = Math.floor(10 + (xpState.level - 1) * 5); // simple scaling
+      openUpgradeChoices();
+    }
+    renderXP();
+  }
+
+function renderXP() {
+  if (!xpState.enabled) {
+    uiXP.style.display = 'none';
+    uiXPSlider.style.display = 'none';
+    return;
+  }
+
+  uiXP.style.display = 'inline-flex';
+  uiXPSlider.style.display = 'inline-block';
+
+  uiXP.textContent = `Lv ${xpState.level} · XP ${Math.floor(xpState.xp)}/${xpState.xpToNext}`;
+
+  uiXPSlider.max = String(xpState.xpToNext);
+  uiXPSlider.value = String(Math.floor(xpState.xp));
+}
+
+  function openUpgradeChoices() {
+    // pause gameplay, show overlay
+    running = false;
+    setStatus('Level Up');
+
+    upgradeList.innerHTML = '';
+    upgradeSub.textContent = 'Choose 1 upgrade (3 random).';
+
+    // pick 3 non-maxed upgrades
+    const pool = UPGRADES.filter(u => !isUpgradeMaxed(u.id));
+    // if everything maxed, fallback: just close
+    if (pool.length === 0) {
+      running = true;
+      setStatus('Running');
+      return;
+    }
+
+    const picks = [];
+    const guardMax = 50;
+    let guard = 0;
+    while (picks.length < Math.min(3, pool.length) && guard++ < guardMax) {
+      const u = pool[Math.floor(Math.random() * pool.length)];
+      if (!picks.includes(u)) picks.push(u);
+    }
+
+    for (const u of picks) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btnPrimary upgBtn';
+      btn.innerHTML = `<div class="upgName">${u.name}</div><div class="upgDesc">${u.desc}</div>`;
+      btn.addEventListener('click', () => {
+        const cur = upgradeLevels.get(u.id) || 0;
+        upgradeLevels.set(u.id, cur + 1);
+        u.apply();
+
+        upgradeOverlay.style.display = 'none';
+        running = true;
+        setStatus('Running');
+        renderXP();
+      });
+      upgradeList.appendChild(btn);
+    }
+
+    upgradeOverlay.style.display = 'flex';
+  }
+
+  // ===== helpers =====
+  function refillQueue() {
+    while (bulletQueue.length < previewCount + 2) {
+      let nextShape = null;
+
+      // --- 绝境保底逻辑 ---
+      const dangerThreshold = bottomLineY - 120;
+      const enemiesInDanger = enemies.filter(e => {
+        const y = e.grid ? gridPos(e.gridCol, e.gridRow).y : e.y;
+        return y > dangerThreshold;
+      });
+
+      if (enemiesInDanger.length > 0 && pityState.count > 0) {
+        // 统计危险区出现频率最高的形状
+        const counts = {};
+        enemiesInDanger.forEach(e => counts[e.shape] = (counts[e.shape] || 0) + 1);
+        
+        let mostFrequent = null;
+        let maxVal = -1;
+        for (const s in counts) {
+          if (counts[s] > maxVal) {
+            maxVal = counts[s];
+            mostFrequent = s;
+          }
+        }
+
+        if (mostFrequent) {
+          nextShape = mostFrequent;
+          pityState.count--; // 消耗一次机会
+          console.log(`保底机制触发！生成形状: ${mostFrequent}, 剩余机会: ${pityState.count}`);
+        }
+      }
+
+      // 如果未触发保底，走原来的逻辑
+      if (!nextShape) {
+        let pool = shapes;
+        if (protectedState.active > 0) {
+          pool = shapes.filter(s => !protectedState.forbidden.includes(s));
+          if (pool.length === 0) pool = shapes;
+          protectedState.active--;
+        }
+        nextShape = pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      bulletQueue.push(nextShape);
+    }
+  }
+
+  function setStatus(text) { uiStatus.textContent = text; }
+  function setScore(v) { score = v; uiScore.textContent = `Score: ${score}`; }
+  function setModeUI() { uiMode.textContent = `Mode: ${mode}`; }
+  function showOverlay(show) { overlay.style.display = show ? 'flex' : 'none'; }
+
+  function svgForShape(shape, filled) {
+    const { stroke, fill } = shapeColors[shape];
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width','18');
+    svg.setAttribute('height','18');
+    svg.setAttribute('viewBox','0 0 18 18');
+
+    const _fill = filled ? stroke : fill;
+    const _fillOpacity = filled ? 0.9 : 1.0;
+
+    if (shape === 'circle') {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx','9'); c.setAttribute('cy','9'); c.setAttribute('r','6');
+      c.setAttribute('stroke', stroke);
+      c.setAttribute('fill', _fill);
+      c.setAttribute('fill-opacity', String(_fillOpacity));
+      c.setAttribute('stroke-width','1.6');
+      svg.appendChild(c);
+    } else if (shape === 'square') {
+      const r = document.createElementNS(ns, 'rect');
+      r.setAttribute('x','3.5'); r.setAttribute('y','3.5'); r.setAttribute('width','11'); r.setAttribute('height','11');
+      r.setAttribute('stroke', stroke);
+      r.setAttribute('fill', _fill);
+      r.setAttribute('fill-opacity', String(_fillOpacity));
+      r.setAttribute('stroke-width','1.6');
+      svg.appendChild(r);
+    } else if (shape === 'triangle') {
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d','M9 3 L15 14 H3 Z');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('fill', _fill);
+      p.setAttribute('fill-opacity', String(_fillOpacity));
+      p.setAttribute('stroke-width','1.6');
+      svg.appendChild(p);
+    } else if (shape === 'pentagon') {
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d','M9 2.5 L15.5 7 L13 14.5 H5 L2.5 7 Z');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('fill', _fill);
+      p.setAttribute('fill-opacity', String(_fillOpacity));
+      p.setAttribute('stroke-width','1.6');
+      svg.appendChild(p);
+    } else if (shape === 'diamond') {
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d','M9 2.5 L15 9 L9 15.5 L3 9 Z');
+      p.setAttribute('stroke', stroke);
+      p.setAttribute('fill', _fill);
+      p.setAttribute('fill-opacity', String(_fillOpacity));
+      p.setAttribute('stroke-width','1.6');
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+
+  function renderNext() {
+    uiNext.innerHTML = '';
+    const s = bulletQueue[0];
+    if (s) uiNext.appendChild(svgForShape(s, true));
+    player.shape = s ?? player.shape;
+    // 子弹变化时，重新渲染任务栏的高亮状态
+    renderRequirement();
+  }
+
+  function newRequirement() {
+    requirement = [
+      shapes[Math.floor(Math.random()*shapes.length)],
+      shapes[Math.floor(Math.random()*shapes.length)],
+      shapes[Math.floor(Math.random()*shapes.length)],
+    ];
+    reqFilled = [false, false, false];
+    renderRequirement();
+  }
+
+  function renderRequirement() {
+    uiReq.innerHTML = '';
+    const currentBullet = bulletQueue[0];
+    for (let i = 0; i < requirement.length; i++) {
+      const s = requirement[i];
+      const box = document.createElement('div');
+      box.className = 'shapeBox';
+      if (reqFilled[i]) {
+        box.classList.add('filled');
+      } else if (s === currentBullet) {
+        // 如果当前子弹匹配该任务，则高亮
+        box.classList.add('highlight');
+      }
+      box.appendChild(svgForShape(s, reqFilled[i]));
+      uiReq.appendChild(box);
+    }
+  }
+
+  function tryFillRequirement(shape) {
+    for (let i = 0; i < requirement.length; i++) {
+      if (!reqFilled[i] && requirement[i] === shape) {
+        reqFilled[i] = true;
+        renderRequirement();
+        // 给刚才更新的格子加一个跳动动画
+        const boxes = uiReq.querySelectorAll('.shapeBox');
+        if (boxes[i]) {
+          boxes[i].classList.add('pop-anim');
+        }
+        break;
+      }
+    }
+    if (reqFilled.every(Boolean)) onRequirementComplete();
+  }
+
+  function onRequirementComplete() {
+    const set = new Set(requirement);
+    let cleared = 0;
+
+    // 触发屏幕震动和 UI 反馈
+    screenShake = 15;
+    const ft = document.getElementById('feedbackText');
+    ft.classList.add('feedback-pop');
+    setTimeout(() => ft.classList.remove('feedback-pop'), 800);
+
+    // 记录保护状态：接下来生成的两发子弹不会包含当前三消的形状
+    protectedState.forbidden = [...requirement];
+    protectedState.active = 2;
+
+    if (reward.clearReqShapes) {
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        if (set.has(enemies[i].shape)) {
+          enemies.splice(i, 1);
+          cleared++;
+        }
+      }
+    }
+
+    setScore(score + reward.scoreBonus + cleared * 3);
+    slowTimeLeft = Math.max(slowTimeLeft, reward.slowTimeSeconds);
+
+    newRequirement();
+  }
+
+  function resetRoguelike() {
+    xpState.enabled = (mode === 'rowturn');
+    xpState.level = 1;
+    xpState.xp = 0;
+    xpState.xpToNext = 10;
+
+    xpState.pierce = 0;
+    xpState.bounceBonus = 0;
+    xpState.bulletSpeedBonus = 0;
+    xpState.doubleShot = 0;
+    xpState.clusterClear = false;
+    xpState.dualTC = false;
+    xpState.aoeOnCircleHit = false;
+    xpState.drill = false;
+    xpState.diamondChain = false;
+    xpState.ghostPass = 0;
+    xpState.noPierceRule = false;
+    xpState.xpGainBonus = 0;
+
+    upgradeLevels.clear();
+    renderXP();
+  }
+
+  function resetGame() {
+    running = true;
+    showOverlay(false);
+    upgradeOverlay.style.display = 'none';
+    setStatus('Running');
+    setScore(0);
+
+    bullets.length = 0;
+    enemies.length = 0;
+
+    player.x = W/2;
+    player.shape = 'circle';
+
+    shotTimer = 0;
+    spawnTimer = 0;
+    rowTimer = 0;
+
+    fireFlash = 0;
+    firePulse = 0;
+
+    slowTimeLeft = 0;
+    pityState.count = 3;
+
+    bulletQueue.length = 0;
+    refillQueue();
+    renderNext();
+
+    newRequirement();
+
+    // grid init
+    if (mode === 'rows') spawnRow('rows');
+    if (mode === 'pinball') spawnRow('pinball');
+    if (mode === 'rowturn') {
+      turnCount = 0;
+      spawnRow('rowturn');
+    }
+
+    resetRoguelike();
+  }
+
+  function goToMenu() {
+    running = false;
+    showOverlay(false);
+    upgradeOverlay.style.display = 'none';
+    menuPage.style.display = 'block';
+    gamePage.style.display = 'none';
+  }
+
+  function startMode(m) {
+    mode = m;
+    setModeUI();
+    menuPage.style.display = 'none';
+    gamePage.style.display = 'block';
+    resetGame();
+  }
+
+  function gameOver(reason) {
+    running = false;
+    setStatus('Game Over');
+    overlaySub.textContent = reason ? reason : 'An enemy reached the bottom line.';
+    showOverlay(true);
+  }
+
+  // ===== Spawning =====
+  function spawnEnemyClassic() {
+    const t = modeTuning.classic;
+    const shape = shapes[Math.floor(Math.random()*shapes.length)];
+    enemies.push({ x: rand(40, W-40), y: -20, size: t.enemySize, shape, vy: t.enemyFallSpeed, grid:false });
+  }
+
+  function laneX(laneIndex, laneCount) {
+    const pad = 60;
+    const usable = W - pad*2;
+    const step = usable / (laneCount - 1);
+    return pad + step * laneIndex;
+  }
+
+  function spawnEnemiesLanes() {
+    const t = modeTuning.lanes;
+    const count = Math.floor(rand(t.batchMin, t.batchMax + 1));
+    const used = new Set();
+    for (let k = 0; k < count; k++) {
+      let lane = Math.floor(Math.random() * t.laneCount);
+      let guard = 0;
+      while (used.has(lane) && guard++ < 10) lane = Math.floor(Math.random() * t.laneCount);
+      used.add(lane);
+
+      const shape = shapes[Math.floor(Math.random()*shapes.length)];
+      enemies.push({
+        x: laneX(lane, t.laneCount),
+        y: -20 - k*16,
+        size: t.enemySize,
+        shape,
+        vy: t.enemyFallSpeed,
+        grid:false
+      });
+    }
+  }
+
+  // Rows / Pinball / RowTurn grid
+  const grid = { cols: laneCountGlobal, cellW: 0, cellH: 38, topY: 26, pad: 70 };
+  function syncGridFor(m) {
+    const t = modeTuning[m];
+    grid.cols = t.laneCount;
+    grid.pad = (m === 'rowturn') ? 10 : 70; 
+    const usable = W - grid.pad*2;
+    grid.cellW = usable / grid.cols;
+
+    // RowTurn：像俄罗斯方块一样，用正方形格子
+    if (m === 'rowturn') {
+      grid.cellH = grid.cellW;
+    } else {
+      grid.cellH = t.cellH;
+    }
+  }
+  function gridPos(col, row) {
+    const x = grid.pad + grid.cellW * col + grid.cellW * 0.5;
+    const y = grid.topY + grid.cellH * row + grid.cellH * 0.5;
+    return { x, y };
+  }
+
+  function shiftGridDown(amt) {
+    for (const e of enemies) if (e.grid) e.gridRow += amt;
+  }
+
+  function spawnTopRow(m) {
+    const t = modeTuning[m];
+    const sizeTight = Math.min(grid.cellW, grid.cellH);
+    let placed = 0;
+    for (let c = 0; c < t.laneCount; c++) {
+      if (Math.random() <= t.rowFillChance) {
+        const shape = shapes[Math.floor(Math.random()*shapes.length)];
+        enemies.push({ grid:true, gridCol:c, gridRow:0, size: sizeTight, shape });
+        placed++;
+      }
+    }
+    if (placed === 0) {
+      const c = Math.floor(Math.random() * t.laneCount);
+      const shape = shapes[Math.floor(Math.random()*shapes.length)];
+      enemies.push({ grid:true, gridCol:c, gridRow:0, size: sizeTight, shape });
+    }
+  }
+
+  function spawnRow(m) {
+    shiftGridDown(1.0);
+    spawnTopRow(m);
+  }
+
+  function advanceTurnRowTurn() {
+    const t = modeTuning.rowturn;
+    turnCount++;
+    // 每次射击仅微调下落距离 (0.2格)，极大提升容错
+    shiftGridDown(0.2);
+
+    // 每 5 次射击生成新的一行，确保下落 1.0 距离后补位
+    if (turnCount % 5 === 0) {
+      spawnTopRow('rowturn');
+    }
+  }
+
+  // ===== Firing =====
+  function getPinballAngle() {
+    if (mode === 'pinball' || mode === 'rowturn') {
+      const dx = mousePos.x - player.x;
+      const dy = mousePos.y - player.y;
+      return Math.atan2(dx, -dy);
+    }
+    return 0;
+  }
+
+  function fireBulletCommon(pinballLike) {
+    refillQueue();
+    const shape = bulletQueue.shift();
+
+    if (pinballLike) {
+      const ang = getPinballAngle();
+      const speed = bulletSpeedPinball + (xpState.enabled ? (xpState.bulletSpeedBonus || 0) : 0);
+      const vx = Math.sin(ang) * speed;
+      const vy = -Math.cos(ang) * speed;
+
+      bullets.push({
+        x: player.x,
+        y: player.y - 18,
+        r: 7,
+        shape,
+        vx, vy,
+        life: pinballMaxLife,
+        bounces: 0,
+        pinball: true,
+        // rowturn roguelike
+        pierceLeft: (xpState.enabled && !xpState.noPierceRule) ? (xpState.pierce || 0) : 0,
+        ghostsLeft: (xpState.enabled) ? (xpState.ghostPass || 0) : 0,
+        rowturn: (mode === 'rowturn')
+      });
+    } else {
+      bullets.push({
+        x: player.x,
+        y: player.y - 18,
+        r: 7,
+        shape,
+        vx: 0,
+        vy: -bulletSpeedLinear,
+        pinball: false,
+        pierceLeft: 0,
+        rowturn: false
+      });
+    }
+
+    refillQueue();
+    renderNext();
+
+    fireFlash = 0.20;
+    firePulse = 1.0;
+    beep();
+  }
+
+  function fireBullet() {
+    // classic/lanes/rows: unchanged behavior
+    if (mode === 'pinball') return fireBulletCommon(true);
+    if (mode === 'rowturn') return fireBulletRowTurn();
+    return fireBulletCommon(false);
+  }
+
+  function fireBulletRowTurn() {
+    // RowTurn fires pinball-like bullets (Pitball vibe)
+    const extra = xpState.doubleShot || 0;
+    const total = 1 + extra;
+
+    // Spread extra bullets a bit (small offset in x)
+    const spread = 12;
+    for (let k = 0; k < total; k++) {
+      const offset = (k - (total-1)/2) * spread;
+      const savedX = player.x;
+      player.x = clamp(savedX + offset, 30, W-30);
+      fireBulletCommon(true);
+      player.x = savedX;
+    }
+  }
+
+  // ===== Input =====
+  const keys = new Set();
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.add('L');
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.add('R');
+    if (e.key === 'r' || e.key === 'R') resetGame();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.delete('L');
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.delete('R');
+  });
+
+  let dragging = false;
+  let ptrStartX = 0;
+  let ptrMoved = false;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    // 如果升级面板开着，忽略画布操作
+    if (upgradeOverlay.style.display === 'flex') return;
+    if (!running) return;
+
+    dragging = true;
+    ptrMoved = false;
+    ptrStartX = e.clientX;
+
+    canvas.setPointerCapture(e.pointerId);
+    try { if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume(); } catch {}
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mousePos.x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    mousePos.y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    if (!dragging || !running) return;
+
+    // 只要移动超过阈值，就认为发生了拖拽
+    if (Math.abs(e.clientX - ptrStartX) > 2) ptrMoved = true;
+
+    // 只有在非瞄准模式下，拖拽才带动玩家移动
+    if (mode !== 'pinball' && mode !== 'rowturn') {
+      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+      player.x = clamp(x, 30, W-30);
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (!dragging) return;
+    dragging = false;
+
+    if (upgradeOverlay.style.display === 'flex') return;
+    if (!running) return;
+
+    // RowTurn：不再在松手时发射，已改为自动发射
+  });
+
+  restartBtn.addEventListener('click', resetGame);
+  overlayRestartBtn.addEventListener('click', resetGame);
+  backBtn.addEventListener('click', goToMenu);
+  overlayBackBtn.addEventListener('click', goToMenu);
+
+  document.querySelectorAll('[data-start]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.getAttribute('data-start');
+      mode = m;
+      setModeUI();
+      if (m === 'rows' || m === 'pinball' || m === 'rowturn') syncGridFor(m);
+      startMode(m);
     });
+  });
 
-    Render.run(render);
-    const runner = Runner.create();
-    Runner.run(runner, engine);
+  // ===== Collision =====
+  function hitTest(b, e) {
+    const dx = b.x - e.x;
+    const dy = b.y - e.y;
+    const dist2 = dx*dx + dy*dy;
+    const rad = b.r + e.size*0.45;
+    return dist2 <= rad*rad;
+  }
 
-    World.add(engine.world, [
-        Bodies.rectangle(width/2, height + 25, width, 50, { isStatic: true }),
-        Bodies.rectangle(-25, height/2, 50, height, { isStatic: true }),
-        Bodies.rectangle(width + 25, height/2, 50, height, { isStatic: true })
-    ]);
-
-    // 获取当前关卡需要的灯数量（修复：根据关卡等级决定，最多5个）
-    function getRequiredSlots() {
-        return Math.min(5, level);
+  function rowturnMatchRule(bShape, eShape) {
+    // base: exact match
+    if (bShape === eShape) return true;
+    // upgrade: triangle/circle bullets can kill both triangle and circle enemies
+    if (xpState.enabled && xpState.dualTC) {
+      const isTCBullet = (bShape === 'triangle' || bShape === 'circle');
+      const isTCEnemy = (eShape === 'triangle' || eShape === 'circle');
+      if (isTCBullet && isTCEnemy) return true;
     }
+    return false;
+  }
 
-    // 获取能量增益乘数（随关卡增加，保持游戏平衡）
-    function getEnergyMultiplier() {
-        // level 1: 1x, level 2: 1.4x, level 3: 1.8x, level 4: 2.2x, level 5: 2.6x
-        return 1 + (level - 1) * 0.4;
-    }
+  // cluster helper (grid-only)
+  function findClusterSameShape(col, row, shape) {
+    const key = (c,r) => `${c},${r}`;
+    const visited = new Set();
+    const out = [];
+    const q = [{c:col, r:row}];
+    visited.add(key(col,row));
 
-    function createBubble(x, y) {
-        let color = COLORS[Math.floor(Math.random() * COLORS.length)];
-        let label = 'normal', rand = Math.random();
-        if (rand < 0.008) label = 'bomb'; 
-        else if (rand < 0.007) label = 'rainbow'; 
-        const b = Bodies.circle(x, y, 22, {
-            restitution: 0.5, friction: 0.3, frictionAir: 0.01, label,
-            customColor: label === 'rainbow' ? 'ANY' : color,
-            render: { visible: false, fillStyle: label === 'bomb' ? '#111' : color, strokeStyle: '#fff', lineWidth: 2 }
-        });
-        World.add(engine.world, b);
-    }
-
-    function spawnEnergyShard(startX, startY, color) {
-        const count = 4 + Math.floor(Math.random() * 3);
-        for(let i=0; i<count; i++) {
-            const shard = document.createElement('div');
-            shard.className = 'energy-shard';
-            shard.style.backgroundColor = color;
-            shard.style.boxShadow = `0 0 4px ${color}`;
-            shard.style.left = startX + 'px';
-            shard.style.top = startY + 'px';
-            container.appendChild(shard);
-
-            const target = document.getElementById('energy-bar-container').getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            const targetX = (target.left + target.width/2) - containerRect.left;
-            const targetY = (target.top + target.height/2) - containerRect.top;
-
-            shard.animate([
-                { transform: 'scale(1) translate(0, 0)', opacity: 1 },
-                { transform: `scale(1.5) translate(${(Math.random()-0.5)*60}px, ${(Math.random()-0.5)*60}px)`, opacity: 1, offset: 0.1 },
-                { transform: `scale(0.1) translate(${targetX - startX}px, ${targetY - startY}px)`, opacity: 0.2 }
-            ], {
-                duration: 400 + Math.random() * 400,
-                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                fill: 'forwards'
-            }).onfinish = () => shard.remove();
+    while (q.length) {
+      const cur = q.pop();
+      // find enemy at cur
+      const idx = enemies.findIndex(e => e.grid && e.gridCol === cur.c && e.gridRow === cur.r && e.shape === shape);
+      if (idx === -1) continue;
+      out.push({c:cur.c, r:cur.r});
+      const nbs = [
+        {c:cur.c+1, r:cur.r},
+        {c:cur.c-1, r:cur.r},
+        {c:cur.c, r:cur.r+1},
+        {c:cur.c, r:cur.r-1},
+      ];
+      for (const nb of nbs) {
+        if (nb.c < 0 || nb.c >= grid.cols) continue;
+        if (nb.r < 0) continue;
+        const k = key(nb.c, nb.r);
+        if (visited.has(k)) continue;
+        // only push if an enemy exists there with same shape
+        const has = enemies.some(e => e.grid && e.gridCol === nb.c && e.gridRow === nb.r && e.shape === shape);
+        if (has) {
+          visited.add(k);
+          q.push(nb);
         }
+      }
+    }
+    return out;
+  }
+
+  function clearAtGridCell(col, row) {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (e.grid && e.gridCol === col && e.gridRow === row) {
+        enemies.splice(i, 1);
+        return e;
+      }
+    }
+    return null;
+  }
+
+  function rowturnAOEClear(centerCol, centerRow) {
+    // clear 4-adjacent cells (and center already cleared by caller)
+    const dirs = [
+      {dc:1, dr:0},
+      {dc:-1, dr:0},
+      {dc:0, dr:1},
+      {dc:0, dr:-1},
+    ];
+    let cleared = 0;
+    for (const d of dirs) {
+      const c = centerCol + d.dc;
+      const r = centerRow + d.dr;
+      if (c < 0 || c >= grid.cols) continue;
+      if (r < 0) continue;
+      const killed = clearAtGridCell(c, r);
+      if (killed) cleared++;
+    }
+    return cleared;
+  }
+
+  // ===== Rendering =====
+  function isShapeNeeded(shape) {
+    for (let i = 0; i < requirement.length; i++) {
+      if (requirement[i] === shape && !reqFilled[i]) return true;
+    }
+    return false;
+  }
+
+  function drawShape(shape, x, y, size, alpha = 1, glow = 0, isTarget = false) {
+    const { stroke, fill } = shapeColors[shape];
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.lineWidth = 2;
+
+    if (isTarget) {
+      ctx.save();
+      const pulse = 1.1 + Math.sin(performance.now() / 100) * 0.05;
+      ctx.strokeStyle = "rgba(255,255,255,0.8)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.7 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // 核心能量逻辑（修复：灯点亮后先显示，再延迟重置）
-    function addEnergy(gain) {
-        const oldCharges = charges;
-        const requiredSlots = getRequiredSlots();
-        
-        // 应用能量乘数
-        const adjustedGain = gain * getEnergyMultiplier();
-        currentEnergy += adjustedGain;
-
-        // 如果正在重置灯，先累积能量，不处理点灯逻辑
-        if (isResetting) {
-            syncUI();
-            return;
-        }
-
-        // 能量条满了 -> 点亮一盏灯
-        let allLit = false;
-        while (currentEnergy >= ENERGY_PER_SLOT && !isResetting) {
-            currentEnergy -= ENERGY_PER_SLOT;
-            litSlots++;
-            
-            // 检查是否所有灯都亮了
-            if (litSlots >= requiredSlots) {
-                allLit = true;
-                isResetting = true;
-                break;
-            }
-        }
-
-        // 先更新UI，显示灯被点亮的状态
-        syncUI();
-        
-        // 如果有新灯被点亮，添加点亮动画
-        animateLitSlots();
-
-        // 如果所有灯都亮了 -> SPIN +1，然后延迟重置
-        if (allLit) {
-            charges++;
-            flashBackground('#00ffff', 400);
-            shakeScreen(15);
-            
-            // SPIN 增加时的超强动画
-            showSpinGainEffect();
-            
-            // 为所有亮着的灯添加脉冲动画
-            const allSlots = document.querySelectorAll('.energy-slot.active');
-            allSlots.forEach(slot => {
-                slot.classList.add('all-lit');
-            });
-            
-            // 延迟重置灯，让玩家看到所有灯都亮的效果
-            setTimeout(() => {
-                litSlots = 0;
-                isResetting = false;
-                syncUI();
-            }, 700);
-        } else if (charges > oldCharges) {
-            // SPIN 增加时的动画（兜底逻辑）
-            showSpinGainEffect();
-        }
+    if (glow > 0) {
+      ctx.shadowColor = stroke;
+      ctx.shadowBlur = glow;
     }
 
-    // 为新点亮的灯添加动画效果
-    function animateLitSlots() {
-        const slots = document.querySelectorAll('.energy-slot.active');
-        slots.forEach((slot, index) => {
-            if (!slot.classList.contains('lighting')) {
-                slot.classList.add('lighting');
-                // 动画结束后移除类
-                setTimeout(() => slot.classList.remove('lighting'), 600);
-            }
-        });
+    ctx.strokeStyle = stroke;
+    ctx.fillStyle = fill;
+
+    if (shape === 'circle') {
+      ctx.beginPath();
+      ctx.arc(0, 0, size*0.5, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    } else if (shape === 'square') {
+      ctx.beginPath();
+      ctx.rect(-size*0.5, -size*0.5, size, size);
+      ctx.fill(); ctx.stroke();
+    } else if (shape === 'triangle') {
+      ctx.beginPath();
+      ctx.moveTo(0, -size*0.58);
+      ctx.lineTo(size*0.58, size*0.5);
+      ctx.lineTo(-size*0.58, size*0.5);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else if (shape === 'pentagon') {
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+        const px = Math.cos(angle) * size * 0.5;
+        const py = Math.sin(angle) * size * 0.5;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else if (shape === 'diamond') {
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.5);
+      ctx.lineTo(size * 0.5, 0);
+      ctx.lineTo(0, size * 0.5);
+      ctx.lineTo(-size * 0.5, 0);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawBottomLine() {
+    ctx.strokeStyle = '#223044';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, bottomLineY);
+    ctx.lineTo(W, bottomLineY);
+    ctx.stroke();
+  }
+
+  function drawAimLine(progress01) {
+    const s = player.shape;
+    const { stroke } = shapeColors[s];
+
+    ctx.save();
+    ctx.globalAlpha = 0.22 + progress01 * 0.25;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 7]);
+
+    ctx.beginPath();
+    if (mode === 'pinball' || mode === 'rowturn') {
+      const ang = getPinballAngle();
+      const dx = Math.sin(ang);
+      const dy = -Math.cos(ang);
+      const maxLen = 520;
+      
+      const x2 = player.x + dx * maxLen;
+      const y2 = player.y + dy * maxLen;
+
+      // 基础路径
+      ctx.moveTo(player.x, player.y - 8);
+
+      // 计算第一次反弹位置
+      let hitX = x2;
+      let hitY = y2;
+      let bounceX = null;
+      let bounceY = null;
+      let normalX = 0;
+
+      const left = 10, right = W - 10;
+      if (x2 <= left) {
+        const t = (left - player.x) / dx;
+        hitX = left;
+        hitY = player.y - 8 + dy * t;
+        normalX = 1;
+      } else if (x2 >= right) {
+        const t = (right - player.x) / dx;
+        hitX = right;
+        hitY = player.y - 8 + dy * t;
+        normalX = -1;
+      }
+
+      ctx.lineTo(hitX, hitY);
+
+      // 如果有反弹，绘制反弹路径
+      if (normalX !== 0) {
+        const revDX = dx * -1; // 简单的水平反弹
+        ctx.lineTo(hitX + revDX * 100, hitY + dy * 100);
+      }
+    } else {
+      ctx.moveTo(player.x, player.y - 8);
+      ctx.lineTo(player.x, 16);
+    }
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawBeatRing(progress01) {
+    const s = player.shape;
+    const { stroke } = shapeColors[s];
+    const r = 32;
+    const start = -Math.PI/2;
+    const end = start + Math.PI * 2 * progress01;
+
+    ctx.save();
+    ctx.lineWidth = 4;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, r, 0, Math.PI*2);
+    ctx.stroke();
+
+    ctx.strokeStyle = stroke;
+    ctx.shadowColor = stroke;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, r, start, end);
+    ctx.stroke();
+    ctx.restore();
+
+    if (firePulse > 0) {
+      const pulseR = r + (1 - firePulse) * 28;
+      ctx.save();
+      ctx.globalAlpha = firePulse * 0.7;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = stroke;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, pulseR, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawPlayer(progress01) {
+    const t = progress01;
+    const ease = t*t*(3 - 2*t);
+    const glow = 8 + ease * 34;
+
+    drawShape(player.shape, player.x, player.y, 44, 1, glow);
+
+    // In rowturn there's no beat-based firing, but we keep the ring as a "aim/identity" element.
+    drawBeatRing(progress01);
+    drawAimLine(progress01);
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(player.x - 22, player.y + 28);
+    ctx.lineTo(player.x + 22, player.y + 28);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawScreenFlash() {
+    if (fireFlash <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = fireFlash;
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.save();
+    if (screenShake > 0) {
+      ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+      screenShake *= 0.9;
+      if (screenShake < 0.5) screenShake = 0;
     }
 
-    function syncUI() {
-        const requiredSlots = getRequiredSlots();
-        
-        // 1. 更新能量条（代表点亮下一盏灯的进度）
-        const energyPercent = (currentEnergy / ENERGY_PER_SLOT) * 100;
-        document.getElementById('energy-bar-fill').style.width = Math.min(100, energyPercent) + '%';
+    ctx.clearRect(0,0,W,H);
+    drawBottomLine();
 
-        // 2. 更新灯位
-        const containerUI = document.getElementById('slots-container');
-        containerUI.innerHTML = '';
-        for(let i=0; i<requiredSlots; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'energy-slot' + (i < litSlots ? ' active' : '');
-            containerUI.appendChild(slot);
+    for (const e of enemies) {
+      if (e.grid) {
+        const p = gridPos(e.gridCol, e.gridRow);
+        e.x = p.x; e.y = p.y;
+      }
+      // 如果该敌人的形状是任务需要的，则高亮
+      drawShape(e.shape, e.x, e.y, e.size, 1, 0, isShapeNeeded(e.shape));
+    }
+
+    for (const b of bullets) drawShape(b.shape, b.x, b.y, 14, 1, 0);
+
+    const progress01 = clamp(shotTimer / shotInterval, 0, 1);
+    drawPlayer(progress01);
+
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(0,0,0,0.0)');
+    g.addColorStop(1,'rgba(0,0,0,0.35)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    drawScreenFlash();
+    ctx.restore();
+  }
+
+  // ===== Update loop =====
+  let last = performance.now();
+  function tick(now) {
+    const rawDt = Math.min(0.033, (now - last)/1000);
+    last = now;
+
+    let timeScale = 1;
+    if (slowTimeLeft > 0) {
+      slowTimeLeft = Math.max(0, slowTimeLeft - rawDt);
+      timeScale = reward.slowFactor;
+    }
+    const dt = rawDt * timeScale;
+
+    if (running) {
+      // movement
+      let dir = 0;
+      if (keys.has('L')) dir -= 1;
+      if (keys.has('R')) dir += 1;
+      player.x = clamp(player.x + dir * playerSpeed * dt, 30, W-30);
+
+      // spawn/fall (rowturn has no timer-based stepping)
+      if (mode === 'rows' || mode === 'pinball') {
+        const t = modeTuning[mode];
+        rowTimer += dt;
+        while (rowTimer >= t.rowStepInterval) {
+          rowTimer -= t.rowStepInterval;
+          spawnRow(mode);
         }
+      } else if (mode === 'classic') {
+        const t = modeTuning.classic;
+        spawnTimer += dt;
+        while (spawnTimer >= t.enemySpawnInterval) {
+          spawnTimer -= t.enemySpawnInterval;
+          spawnEnemyClassic();
+        }
+        for (const e of enemies) if (!e.grid) e.y += t.enemyFallSpeed * dt;
+      } else if (mode === 'lanes') {
+        const t = modeTuning.lanes;
+        spawnTimer += dt;
+        while (spawnTimer >= t.enemySpawnInterval) {
+          spawnTimer -= t.enemySpawnInterval;
+          spawnEnemiesLanes();
+        }
+        for (const e of enemies) if (!e.grid) e.y += t.enemyFallSpeed * dt;
+      } else if (mode === 'rowturn') {
+        // nothing here: advancing happens on click
+        if (turnPending && bullets.length === 0) {
+          advanceTurnRowTurn();
+          turnPending = false;
+        }
+      }
 
-        // 3. 更新 SPIN 文本
-        document.getElementById('spin-text').innerText = `SPINS: ${charges}`;
+      // auto fire
+      shotTimer += dt;
+      if (shotTimer >= shotInterval) {
+        shotTimer = shotTimer % shotInterval;
+        fireBullet();
+        if (mode === 'rowturn') turnPending = true;
+      }
 
-        // 4. 更新摇杆状态
-        const lever = document.getElementById('lever-container');
-        if (charges > 0) lever.classList.add('ready'); else lever.classList.remove('ready');
-    }
+      // bullets move + wall bounce for pinball-like bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
 
-    function updateScore(gain, x, y) {
-        currentScore += gain;
-        document.getElementById('current-score').innerText = Math.floor(currentScore).toLocaleString();
-        showFloatingText(x, y, "+" + Math.floor(gain).toLocaleString());
-        
-        if (currentScore >= goalScore) {
-            nextLevel();
+        b.x += (b.vx ?? 0) * dt;
+        b.y += (b.vy ?? 0) * dt;
+
+        if (b.pinball) {
+          b.life -= rawDt;
+
+          const left = 10, right = W - 10;
+          if (b.x - b.r <= left && b.vx < 0) {
+            b.x = left + b.r;
+            b.vx *= -1;
+            b.bounces++;
+          } else if (b.x + b.r >= right && b.vx > 0) {
+            b.x = right - b.r;
+            b.vx *= -1;
+            b.bounces++;
+          }
+
+          const maxB = pinballMaxBounces + (b.rowturn ? (xpState.bounceBonus || 0) : 0);
+          if (b.life <= 0 || b.bounces >= maxB || b.y < -80) {
+            bullets.splice(i, 1);
+          }
         } else {
-            syncUI();
+          if (b.y < -60) bullets.splice(i, 1);
         }
-    }
+      }
 
-    function nextLevel() {
-        level++;
-        // 不再清零分数，分数继续累积
-        goalScore = Math.floor(500 * Math.pow(2.0, level - 1));
-        
-        document.getElementById('level-text').innerText = `LEVEL ${level}`;
-        document.getElementById('target-score').innerText = `GOAL: ${goalScore.toLocaleString()}`;
-        
-        const overlay = document.getElementById('level-up-overlay');
-        overlay.style.display = 'flex';
-        setTimeout(() => overlay.style.display = 'none', 600);
-        
-        syncUI();
-    }
+      // fire VFX decay
+      fireFlash = Math.max(0, fireFlash - rawDt * 1.8);
+      firePulse = Math.max(0, firePulse - rawDt * 2.2);
 
-    function flashBackground(color, duration = 150) {
-        container.style.background = color + "44"; 
-        setTimeout(() => { container.style.background = "radial-gradient(circle at center, #1a0033 0%, #000 100%)"; }, duration);
-    }
+      // collisions
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        let hitIndex = -1;
 
-    function shakeScreen(intensity = 5, applyFactor = true) {
-        const factor = applyFactor ? 2 : 1;
-        container.animate([
-            { transform: `translate(${Math.random()*intensity*factor}px, ${Math.random()*intensity*factor}px)` },
-            { transform: `translate(${-Math.random()*intensity*factor}px, ${-Math.random()*intensity*factor}px)` },
-            { transform: `translate(${Math.random()*intensity*0.5*factor}px, ${-Math.random()*intensity*0.5*factor}px)` },
-            { transform: `translate(0,0)` }
-        ], { duration: 100, iterations: 1 });
-    }
-
-    function showPraise(count, x, y, customColor) {
-        let text = "", intensity = 0, flashDur = 150;
-        if (count >= 20) { text = PRAISES[5]; intensity = 100; flashDur = 900; }
-        else if (count >= 15) { text = PRAISES[4]; intensity = 60; flashDur = 700; }
-        else if (count >= 12) { text = PRAISES[3]; intensity = 50; flashDur = 650; }
-        else if (count >= 9)  { text = PRAISES[2]; intensity = 40; flashDur = 500; }
-        else if (count >= 6)  { text = PRAISES[1]; intensity = 30; flashDur = 400; }
-        else if (count >= 4)  { text = PRAISES[0]; intensity = 20; flashDur = 300; }
-        else return;
-        const el = document.getElementById('praise-display');
-        el.innerText = text; el.className = "";
-        void el.offsetWidth; el.className = "praise-anim";
-        el.style.color = customColor || COLORS[Math.floor(Math.random()*COLORS.length)];
-        shakeScreen(intensity);
-        flashBackground(el.style.color, flashDur);
-    }
-
-    function showFloatingText(x, y, text) {
-        const el = document.createElement('div');
-        el.className = 'floating-text';
-        el.style.left = x + 'px'; el.style.top = y + 'px';
-        el.innerText = text;
-        container.appendChild(el);
-        setTimeout(() => el.remove(), 800);
-    }
-
-    // SPIN 增加时的超强特效
-    function showSpinGainEffect() {
-        const spinEl = document.getElementById('spin-text');
-        spinEl.classList.remove('spin-pop');
-        void spinEl.offsetWidth; 
-        spinEl.classList.add('spin-pop');
-        
-        // 创建 "+1 SPIN!" 浮动提示
-        const plusOne = document.createElement('div');
-        plusOne.className = 'spin-plus-one';
-        plusOne.innerText = '+1 SPIN!';
-        const spinRect = spinEl.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        plusOne.style.left = (spinRect.left + spinRect.width/2 - containerRect.left) + 'px';
-        plusOne.style.top = (spinRect.top - containerRect.top) + 'px';
-        container.appendChild(plusOne);
-        setTimeout(() => plusOne.remove(), 1000);
-        
-        // 创建放射状粒子
-        for(let i = 0; i < 12; i++) {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: absolute;
-                width: 6px; height: 6px;
-                background: ${i % 2 === 0 ? '#00ffff' : '#ff00ff'};
-                border-radius: 50%;
-                pointer-events: none;
-                z-index: 250;
-                box-shadow: 0 0 10px ${i % 2 === 0 ? '#00ffff' : '#ff00ff'};
-            `;
-            particle.style.left = (spinRect.left + spinRect.width/2 - containerRect.left) + 'px';
-            particle.style.top = (spinRect.top + spinRect.height/2 - containerRect.top) + 'px';
-            container.appendChild(particle);
-            
-            const angle = (i / 12) * Math.PI * 2;
-            const distance = 80 + Math.random() * 40;
-            particle.animate([
-                { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
-                { transform: `translate(calc(-50% + ${Math.cos(angle) * distance}px), calc(-50% + ${Math.sin(angle) * distance}px)) scale(0)`, opacity: 0 }
-            ], {
-                duration: 600,
-                easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-                fill: 'forwards'
-            }).onfinish = () => particle.remove();
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const e = enemies[j];
+          if (hitTest(b, e)) { hitIndex = j; break; }
         }
-    }
 
-    window.pullLever = function() {
-        if (isPulling || charges <= 0) return;
-        charges--; syncUI();
-        isPulling = true;
-        document.getElementById('lever-container').classList.add('pulling');
-        let count = 0;
-        const totalBubbles = 50; // 每次spin掉落50个球
-        const spawnInterval = setInterval(() => {
-            createBubble(Math.random() * (width - 60) + 30, -40);
-            count++;
-            if (count >= totalBubbles) clearInterval(spawnInterval);
-        }, 25); // 稍微加快掉落速度
-        setTimeout(() => {
-            document.getElementById('lever-container').classList.remove('pulling');
-            isPulling = false;
-        }, 800); // 延长一点等待时间以配合更多的球
-    };
+        if (hitIndex !== -1) {
+          const e = enemies[hitIndex];
 
-    function applyShockwave(pos, r, force) {
-        Composite.allBodies(engine.world).forEach(b => {
-            if (b.isStatic) return;
-            const dist = Vector.magnitude(Vector.sub(b.position, pos));
-            if (dist < r && dist > 0) {
-                const n = Vector.normalise(Vector.sub(b.position, pos));
-                Body.applyForce(b, b.position, Vector.mult(n, (1 - dist/r) * force));
+          // match rules
+          const match =
+            (mode === 'rowturn')
+              ? rowturnMatchRule(b.shape, e.shape)
+              : (b.shape === e.shape);
+
+          if (match) {
+            // kill main target
+            enemies.splice(hitIndex, 1);
+            setScore(score + 10);
+            tryFillRequirement(e.shape);
+
+            // XP: 1 per enemy kill
+            gainXP(1);
+
+            // RowTurn upgrades
+            if (mode === 'rowturn' && e.grid) {
+              // Vertical Drill: clear one enemy above
+              if (xpState.drill) {
+                const killedAbove = clearAtGridCell(e.gridCol, e.gridRow - 1);
+                if (killedAbove) gainXP(1);
+              }
+
+              // Diamond Chain: random same-shape clear
+              if (xpState.diamondChain && b.shape === 'diamond') {
+                const targets = enemies.filter(enemy => enemy !== e && enemy.shape === e.shape);
+                if (targets.length > 0) {
+                  const randT = targets[Math.floor(Math.random() * targets.length)];
+                  if (randT.grid) clearAtGridCell(randT.gridCol, randT.gridRow);
+                  else enemies.splice(enemies.indexOf(randT), 1);
+                  gainXP(1);
+                }
+              }
+
+              // AOE on circle hit (bullet consumed, no pierce)
+              if (xpState.aoeOnCircleHit && e.shape === 'circle') {
+                const aoeCleared = rowturnAOEClear(e.gridCol, e.gridRow);
+                if (aoeCleared > 0) {
+                  setScore(score + aoeCleared * 6);
+                  // XP for AOE kills too (still “kills”)
+                  gainXP(aoeCleared);
+                }
+                bullets.splice(i, 1);
+                continue;
+              }
+
+              // Cluster clear (size>=3) only if upgrade enabled
+              if (xpState.clusterClear) {
+                const cluster = findClusterSameShape(e.gridCol, e.gridRow, e.shape);
+                if (cluster.length >= 3) {
+                  // already removed 1 above, so remove remaining in cluster
+                  let removed = 0;
+                  for (const cell of cluster) {
+                    const killed = clearAtGridCell(cell.c, cell.r);
+                    if (killed) removed++;
+                  }
+                  // removed excludes the one already removed? (we removed by index, so still safe)
+                  if (removed > 0) {
+                    setScore(score + removed * 6);
+
+                    // XP for these cluster kills: treat as kills
+                    gainXP(removed);
+
+                    // EXTRA XP from "三消" (cluster event):
+                    // 1/5 of kill XP per enemy in the cluster to avoid inflation
+                    const bonus = (cluster.length) * 0.2;
+                    gainXP(bonus);
+                  } else {
+                    // still award the triple bonus for the cluster trigger
+                    const bonus = (cluster.length) * 0.2;
+                    gainXP(bonus);
+                  }
+                }
+              }
             }
-        });
-    }
 
-    async function chainExplode(startBody) {
-        if (startBody.isPopped) return;
-        let targetColor = startBody.customColor;
-        const centerPos = { ...startBody.position };
-        const toExplode = [];
-        const processed = new Set([startBody.id]);
-        const queue = [startBody];
-
-        while(queue.length > 0) {
-            const curr = queue.shift();
-            toExplode.push(curr);
-            Composite.allBodies(engine.world).filter(b => {
-                if (b.isStatic || processed.has(b.id) || b.isPopped) return false;
-                if (b.label !== 'normal' && b.label !== 'rainbow') return false;
-                return (b.label === 'rainbow' || b.customColor === targetColor || targetColor === 'ANY') && Vector.magnitude(Vector.sub(b.position, curr.position)) < 55;
-            }).forEach(n => { processed.add(n.id); queue.push(n); });
-        }
-
-        if (toExplode.length < 2) return;
-        toExplode.sort((a, b) => Vector.magnitudeSquared(Vector.sub(a.position, centerPos)) - Vector.magnitudeSquared(Vector.sub(b.position, centerPos)));
-
-        showPraise(toExplode.length, centerPos.x, centerPos.y, startBody.render.fillStyle);
-        updateScore(toExplode.length * 20, centerPos.x, centerPos.y);
-        addEnergy(toExplode.length * 1.2); // 消除泡泡获得能量（减少20%，会自动应用乘数）
-        
-        for(let b of toExplode) {
-            b.isPopped = true;
-            spawnEnergyShard(b.position.x, b.position.y, b.render.fillStyle);
-            applyShockwave(b.position, 100, 0.005);
-            shakeScreen(1.5);
-            spawnBurst(b.position.x, b.position.y, b.render.fillStyle, toExplode.length > 10);
-            World.remove(engine.world, b);
-            await new Promise(r => setTimeout(r, 50));
-        }
-    }
-
-    async function triggerBomb(bombBody) {
-        if (bombBody.isPopped) return;
-        bombBody.isPopped = true;
-        const pos = { ...bombBody.position };
-        const nearby = Composite.allBodies(engine.world).filter(b => !b.isStatic && b !== bombBody && Vector.magnitude(Vector.sub(b.position, pos)) < 200);
-        
-        // 点击炸弹奖励一次 SPIN
-        charges++;
-        syncUI();
-        showSpinGainEffect();
-        
-        let bombTotalGain = 0;
-        const counted = new Set();
-        for (const b of nearby) {
-            if (counted.has(b.id)) continue;
-            const cluster = [];
-            const q = [b], v = new Set([b.id]), tc = b.customColor;
-            while(q.length > 0) {
-                const c = q.shift(); cluster.push(c); counted.add(c.id);
-                nearby.filter(n => !v.has(n.id) && !n.isPopped && !counted.has(n.id) && (n.label==='normal'||n.label==='rainbow') && (n.label==='rainbow'||n.customColor===tc||tc==='ANY') && Vector.magnitude(Vector.sub(n.position, c.position)) < 55)
-                .forEach(n => { v.add(n.id); q.push(n); });
+            // bullet consumption rules
+            if (mode === 'rowturn') {
+              // RowTurn default: bullets ARE consumed on hit unless pierceLeft > 0
+              if (b.pierceLeft > 0) {
+                b.pierceLeft -= 1;
+              } else {
+                bullets.splice(i, 1);
+              }
+            } else {
+              // original behavior:
+              // non-pinball consume, pinball keep going
+              if (!b.pinball) bullets.splice(i, 1);
             }
-            bombTotalGain += (cluster.length >= 2 ? cluster.length * 20 : 10);
-        }
 
-        updateScore(bombTotalGain, pos.x, pos.y);
-        showPraise(nearby.length, pos.x, pos.y, '#FF00FF');
-        shakeScreen(25, false);
-        spawnBurst(pos.x, pos.y, '#FF00FF', true);
-        applyShockwave(pos, 300, 0.05);
-        World.remove(engine.world, bombBody);
+          } else {
+            // mismatch behavior
+            setScore(Math.max(0, score - 2));
 
-        for(let b of nearby) {
-            b.isPopped = true;
-            spawnEnergyShard(b.position.x, b.position.y, b.render.fillStyle);
-            applyShockwave(b.position, 80, 0.003);
-            spawnBurst(b.position.x, b.position.y, b.render.fillStyle, true);
-            World.remove(engine.world, b);
-            await new Promise(r => setTimeout(r, 20));
-        }
-        addEnergy(nearby.length * 1.2); // 炸弹也获得能量（减少20%，会自动应用乘数）
-    }
-
-    function spawnBurst(x, y, color, isEpic) {
-        const count = isEpic ? 15 : 6;
-        for (let i = 0; i < count; i++) {
-            const p = Bodies.circle(x, y, isEpic ? 4 : 2, { frictionAir: 0.04, collisionFilter: { group: -1 }, render: { fillStyle: isEpic ? (Math.random() > 0.5 ? '#fff' : color) : color } });
-            World.add(engine.world, p);
-            const f = isEpic ? 0.025 : 0.012;
-            Body.applyForce(p, p.position, { x: (Math.random()-0.5)*f, y: (Math.random()-0.5)*f });
-            setTimeout(() => World.remove(engine.world, p), isEpic ? 700 : 400);
-        }
-    }
-
-    function handleInput(e) {
-        if (isGameOver) return;
-        const rect = render.canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const mousePos = { x: (clientX - rect.left) * (width / rect.width), y: (clientY - rect.top) * (height / rect.height) };
-        const target = Query.point(Composite.allBodies(engine.world).filter(b => !b.isPopped), mousePos).find(b => b.label === 'bomb' || b.label === 'normal' || b.label === 'rainbow');
-        if (target) { if (target.label === 'bomb') triggerBomb(target); else chainExplode(target); }
-    }
-
-    render.canvas.addEventListener('mousedown', handleInput);
-    render.canvas.addEventListener('touchstart', (e) => { handleInput(e); e.preventDefault(); }, { passive: false });
-    for(let i=0; i<70; i++) createBubble(Math.random()*(width-60)+30, Math.random()*(height*0.5)+(height*0.4));
-    
-    syncUI();
-
-    Events.on(render, 'afterRender', () => {
-        const ctx = render.context;
-        const time = Date.now() / 1000;
-        
-        Composite.allBodies(engine.world).forEach(b => {
-            if (b.isStatic || b.isPopped) return;
-            const x = b.position.x, y = b.position.y, r = 22, color = b.render.fillStyle;
-            
-            // 轻微的呼吸效果
-            const breathe = 1 + Math.sin(time * 3 + b.id) * 0.03;
-            const actualR = r * breathe;
-            
-            ctx.save();
-            
-            // 1. 主体 - 半透明彩色填充，更有光泽感
-            ctx.globalAlpha = 0.6;
-            const mainGrad = ctx.createRadialGradient(x - actualR * 0.3, y - actualR * 0.3, 0, x, y, actualR);
-            mainGrad.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-            mainGrad.addColorStop(0.3, color + 'aa');
-            mainGrad.addColorStop(0.7, color + '88');
-            mainGrad.addColorStop(1, color + '44');
-            ctx.beginPath();
-            ctx.arc(x, y, actualR, 0, Math.PI * 2);
-            ctx.fillStyle = mainGrad;
-            ctx.fill();
-            
-            // 2. 彩虹色边缘光晕（肥皂泡特征）
-            ctx.globalAlpha = 0.5;
-            const edgeHue = (time * 30 + b.id * 20) % 360;
-            const edgeGrad = ctx.createRadialGradient(x, y, actualR * 0.75, x, y, actualR * 1.05);
-            edgeGrad.addColorStop(0, 'transparent');
-            edgeGrad.addColorStop(0.5, `hsla(${edgeHue}, 100%, 70%, 0.3)`);
-            edgeGrad.addColorStop(0.7, `hsla(${(edgeHue + 60) % 360}, 100%, 70%, 0.4)`);
-            edgeGrad.addColorStop(0.85, `hsla(${(edgeHue + 120) % 360}, 100%, 70%, 0.3)`);
-            edgeGrad.addColorStop(1, 'transparent');
-            ctx.beginPath();
-            ctx.arc(x, y, actualR * 1.05, 0, Math.PI * 2);
-            ctx.fillStyle = edgeGrad;
-            ctx.fill();
-            
-            // 3. 外边缘描边 - 更亮更清晰
-            ctx.globalAlpha = 0.9;
-            ctx.beginPath();
-            ctx.arc(x, y, actualR, 0, Math.PI * 2);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
-            
-            // 4. 主高光 - 左上角大高光（让泡泡看起来有光泽）
-            ctx.globalAlpha = 1;
-            ctx.beginPath();
-            ctx.ellipse(x - actualR * 0.35, y - actualR * 0.35, actualR * 0.35, actualR * 0.25, -Math.PI / 4, 0, Math.PI * 2);
-            const highGrad = ctx.createRadialGradient(x - actualR * 0.35, y - actualR * 0.35, 0, x - actualR * 0.35, y - actualR * 0.35, actualR * 0.35);
-            highGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-            highGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
-            highGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = highGrad;
-            ctx.fill();
-            
-            // 5. 次高光 - 右下角小高光
-            ctx.beginPath();
-            ctx.arc(x + actualR * 0.3, y + actualR * 0.35, actualR * 0.12, 0, Math.PI * 2);
-            const secHighGrad = ctx.createRadialGradient(x + actualR * 0.3, y + actualR * 0.35, 0, x + actualR * 0.3, y + actualR * 0.35, actualR * 0.12);
-            secHighGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-            secHighGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = secHighGrad;
-            ctx.fill();
-            
-            // 6. 顶部弧形反光
-            ctx.globalAlpha = 0.4;
-            ctx.beginPath();
-            ctx.arc(x, y, actualR * 0.8, Math.PI * 1.1, Math.PI * 1.9);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // 7. 底部柔和反光
-            ctx.globalAlpha = 0.2;
-            ctx.beginPath();
-            ctx.arc(x, y, actualR * 0.85, Math.PI * 0.1, Math.PI * 0.4);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            
-            // 特殊泡泡效果
-            if (b.label === 'bomb') {
-                ctx.globalAlpha = 1;
-                ctx.font = "22px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-                ctx.fillText("💣", x, y);
-            } else if (b.label === 'rainbow') {
-                ctx.globalAlpha = 0.8;
-                const hue = (time * 100) % 360;
-                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, 1)`;
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.arc(x, y, actualR + 2, 0, Math.PI * 2);
-                ctx.stroke();
+            if (mode === 'rowturn') {
+              // Ghost Rounds: pass through mismatched shapes N times
+              if (b.ghostsLeft > 0) {
+                b.ghostsLeft--;
+              } else {
+                bullets.splice(i, 1);
+              }
+            } else {
+              // - normal modes: consume bullet
+              // - pinball: DO NOT consume
+              if (!b.pinball) bullets.splice(i, 1);
             }
-            
-            ctx.restore();
-        });
-    });
+          }
+        }
+      }
+
+      // lose conditions
+      if (mode === 'rows' || mode === 'pinball' || mode === 'rowturn') {
+        for (const e of enemies) {
+          if (!e.grid) continue;
+          const y = gridPos(e.gridCol, e.gridRow).y;
+          if (y + e.size*0.5 >= bottomLineY) { gameOver(); break; }
+        }
+      } else {
+        for (const e of enemies) {
+          if (e.y + e.size*0.5 >= bottomLineY) { gameOver(); break; }
+        }
+      }
+    }
+
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  // Buttons
+  restartBtn.addEventListener('click', resetGame);
+  overlayRestartBtn.addEventListener('click', resetGame);
+  backBtn.addEventListener('click', goToMenu);
+  overlayBackBtn.addEventListener('click', goToMenu);
+
+  // Init
+  goToMenu();
+  requestAnimationFrame(tick);
 })();
 </script>
 </body>
